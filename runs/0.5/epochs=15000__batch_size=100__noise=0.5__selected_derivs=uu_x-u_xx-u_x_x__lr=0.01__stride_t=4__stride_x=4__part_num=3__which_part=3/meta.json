@@ -1,0 +1,34 @@
+{
+  "params": {
+    "epochs": 15000,
+    "batch_size": 100,
+    "lr": 0.01,
+    "lam_reg": 1e-05,
+    "noise": 0.5,
+    "log_every": 2000,
+    "stride_t": 4,
+    "stride_x": 4,
+    "selected_derivs": [
+      "uu_x",
+      "u_xx",
+      "u_x_x"
+    ],
+    "train_pde": true,
+    "train_data": true,
+    "coeff_plot": true,
+    "target": [
+      "0.02",
+      "0",
+      "-1",
+      "0"
+    ],
+    "seed": 34522,
+    "part_num": 3,
+    "which_part": 3
+  },
+  "feature_names": [],
+  "feature_powers": [],
+  "feature_coeffs": "[[0.29988330602645874, 0.094561368227005, 0.3777335584163666], 0.05163751170039177]",
+  "a_hat": 1.0,
+  "saved_at": "2025-10-26 17:22:31"
+}

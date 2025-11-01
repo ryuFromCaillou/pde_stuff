@@ -1,0 +1,28 @@
+#!/bin/bash
+#MSUB -N pdenet
+#MSUB -l walltime=00:08:00:00
+#MSUB -l nodes=1:ppn=8:gpus=1
+#MSUB -j oe
+#MSUB -o logs/$MOAB_JOBID.out
+#MSUB -e logs/$MOAB_JOBID.err
+
+module load cuda 2>/dev/null || true
+module load anaconda 2>/dev/null || true
+source ~/.bashrc 2>/dev/null || true
+conda activate myenv 2>/dev/null || true
+
+cd "${PBS_O_WORKDIR:-$PWD}"
+mkdir -p logs
+
+# Read vars (these MUST exist, otherwise msub -v didn’t pass them)
+: "${EPOCHS:?}"; : "${BATCH:?}"; : "${LR:?}"; : "${NOISE:?}"; : "${SEED:?}"; : "${DERIVS:?}"
+
+echo "JOB=$MOAB_JOBID HOST=$(hostname) CVD=$CUDA_VISIBLE_DEVICES DERIVS=$DERIVS"
+nvidia-smi || true
+
+python sympde2.py \
+  --epochs "${EPOCHS}" \
+  --batch_size "${BATCH}" \
+  --lr "${LR}" \
+  --noise "${NOISE}" \
+
