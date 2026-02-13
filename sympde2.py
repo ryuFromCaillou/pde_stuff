@@ -217,223 +217,6 @@ class SymNetAdapter(nn.Module):
     def forward(self, x):
         return self.sym(x)
 
-#@dataclass(frozen=True)
-#class FeatureSpec:
-#    """A single library term specification.
-#
-#    power: exponent p such that feature = raw / a_hat**p  (or includes the scaling explicitly).
-#           This is what your downstream physical mapping uses.
-#    """
-#    name: str
-#    power: int
-#    fn: Callable[["FeatureLibrary", torch.Tensor, Optional[torch.Tensor], Optional[torch.Tensor], torch.Tensor, bool], torch.Tensor]
-
-#class FeatureLibrary:
-#    """Standalone PDE feature library builder with derivative caching.
-#
-#    Conventions:
-#      - u_out is shape [N, 1]
-#      - x, y are shape [N, 1] with requires_grad=True if derivatives needed
-#      - a_hat is scalar tensor (or shape [1]) on same device
-#
-#    Returned:
-#      F: [N, n_feat] (concatenated features)
-#      names: list[str]
-#      powers: list[int]  (a-scaling exponent for each feature)
-#    """
-#
-#    def __init__(
-#        self,
-#        terms: Iterable[str],
-#        device: Optional[torch.device] = None,
-#        allow_unknown_terms: bool = False,
-#    ):
-#        self.terms = list(terms)
-#        self.device = device
-#        self.allow_unknown_terms = allow_unknown_terms
-#
-#        # term registry
-#        self._specs: Dict[str, FeatureSpec] = {}
-#        self._register_defaults()
-#
-#        # derivative cache (populated per build call)
-#        self._cache: Dict[str, torch.Tensor] = {}
-#
-#    # --------------------------
-#    # Public API
-#    # --------------------------
-#    def build(
-#        self,
-#        u_out: torch.Tensor,
-#        *,
-#        a_hat: torch.Tensor,
-#        x: Optional[torch.Tensor] = None,
-#        y: Optional[torch.Tensor] = None,
-#        create_graph: bool = True,
-#    ) -> Tuple[Optional[torch.Tensor], List[str], List[int]]:
-#        if not self.terms:
-#            return None, [], []
-#
-#        # reset cache per call (critical: cache is only valid for this graph)
-#        self._cache = {}
-#
-#        feats: List[torch.Tensor] = []
-#        names: List[str] = []
-#        powers: List[int] = []
-#
-#        for t in self.terms:
-#            spec = self._specs.get(t, None)
-#            if spec is None:
-#                if self.allow_unknown_terms:
-#                    continue
-#                raise RuntimeError(f"Unknown feature term '{t}'. Allowed: {sorted(self._specs.keys())}")
-#
-#            z = spec.fn(self, u_out, x, y, a_hat, create_graph)
-#
-#            # enforce 2D [N, 1] so cat(dim=1) is safe
-#            if z.dim() == 1:
-#                z = z.unsqueeze(1)
-#            if z.dim() != 2 or z.shape[1] != 1:
-#                raise RuntimeError(f"Feature '{spec.name}' must be [N,1], got {tuple(z.shape)}")
-#
-#            feats.append(z)
-#            names.append(spec.name)
-#            powers.append(spec.power)
-#
-#        F = torch.cat(feats, dim=1) if feats else None
-#        if F is not None:
-#            if self.device is not None and F.device != self.device:
-#                F = F.to(self.device)
-#        return F, names, powers
-#
-#    def __call__(self, u_out: torch.Tensor, *, a_hat: torch.Tensor, x=None, y=None, create_graph: bool = True):
-#        return self.build(u_out, a_hat=a_hat, x=x, y=y, create_graph=create_graph)
-#
-#    # --------------------------
-#    # Derivative helpers (cached)
-#    # --------------------------
-#    def _grad(
-#        self,
-#        out: torch.Tensor,
-#        inp: torch.Tensor,
-#        *,
-#        key: str,
-#        create_graph: bool,
-#    ) -> torch.Tensor:
-#        if inp is None:
-#            raise RuntimeError(f"Cannot compute {key}: input tensor is None.")
-#        if key in self._cache:
-#            return self._cache[key]
-#        g = torch.autograd.grad(
-#            out, inp,
-#            grad_outputs=torch.ones_like(out),
-#            create_graph=create_graph,
-#            retain_graph=True,   # needed because multiple grads in one forward
-#            allow_unused=False,
-#        )[0]
-#        self._cache[key] = g
-#        return g
-#
-#    def u_x(self, u_out: torch.Tensor, x: torch.Tensor, create_graph: bool) -> torch.Tensor:
-#        out = self._grad(u_out, x, key="u_x", create_graph=create_graph)
-#        return out/torch.norm(out)
-#
-#    def u_xx(self, u_out: torch.Tensor, x: torch.Tensor, create_graph: bool) -> torch.Tensor:
-#        ux = self.u_x(u_out, x, create_graph=create_graph)
-#        return self._grad(ux, x, key="u_xx", create_graph=create_graph)
-#
-#    def u_y(self, u_out: torch.Tensor, y: torch.Tensor, create_graph: bool) -> torch.Tensor:
-#        return self._grad(u_out, y, key="u_y", create_graph=create_graph)
-#
-#    def u_yy(self, u_out: torch.Tensor, y: torch.Tensor, create_graph: bool) -> torch.Tensor:
-#        uy = self.u_y(u_out, y, create_graph=create_graph)
-#        return self._grad(uy, y, key="u_yy", create_graph=create_graph)
-#
-#    # --------------------------
-#    # Registry
-#    # --------------------------
-#    def register(self, name: str, power: int, fn: Callable[..., torch.Tensor]) -> None:
-#        if name in self._specs:
-#            raise RuntimeError(f"Feature '{name}' already registered.")
-#        self._specs[name] = FeatureSpec(name=name, power=power, fn=fn)
-#
-#    def _register_defaults(self) -> None:
-#        # NOTE: powers here are chosen so that:
-#        #   feature = raw / a_hat**power
-#        # which matches your downstream "a^{2-p}" coefficient mapping style.
-#
-#        # u (unscaled). If you want u/a_hat, change this spec to (power=1, fn=lambda...: u_out/a_hat)
-#        self.register(
-#            "u", power=0,
-#            fn=lambda self, u, x, y, a, cg: u
-#        )
-#
-#        # u_x / a
-#        self.register(
-#            "u_x", power=1,
-#            fn=lambda self, u, x, y, a, cg: self.u_x(u, x, cg) / a
-#        )
-#
-#        # (u_x / a)^2 = u_x^2 / a^2
-#        self.register(
-#            "u_x2", power=2,
-#            fn=lambda self, u, x, y, a, cg: (self.u_x(u, x, cg) / a) ** 2
-#        )
-#
-#        # 2 u_x / a  (usually redundant; include only if you have a reason)
-#        self.register(
-#            "2u_x", power=1,
-#            fn=lambda self, u, x, y, a, cg: 2.0 * self.u_x(u, x, cg) / a
-#        )
-#
-#        # u_xx / a^2
-#        self.register(
-#            "u_xx", power=2,
-#            fn=lambda self, u, x, y, a, cg: self.u_xx(u, x, cg) / (a ** 2)
-#        )
-#
-#        # u_y / a
-#        self.register(
-#            "u_y", power=1,
-#            fn=lambda self, u, x, y, a, cg: self.u_y(u, y, cg) / a
-#        )
-#
-#        # u_yy / a^2
-#        self.register(
-#            "u_yy", power=2,
-#            fn=lambda self, u, x, y, a, cg: self.u_yy(u, y, cg) / (a ** 2)
-#        )
-#
-#        # u^2 (no a-scaling)
-#        self.register(
-#            "uu", power=0,
-#            fn=lambda self, u, x, y, a, cg: u * u
-#        )
-#
-#        # (u_x/a)*(u_x/a)  (same as u_x2; keep ONE of them)
-#        self.register(
-#            "u_x_x", power=2,
-#            fn=lambda self, u, x, y, a, cg: (self.u_x(u, x, cg) / a) * (self.u_x(u, x, cg) / a)
-#        )
-#
-#        # (u_x/a)*(u_xx/a^2) = u_x*u_xx / a^3
-#        self.register(
-#            "u_x_xx", power=3,
-#            fn=lambda self, u, x, y, a, cg: (self.u_x(u, x, cg) / a) * (self.u_xx(u, x, cg) / (a ** 2))
-#        )
-#
-#        # u * (u_x/a) = u*u_x / a
-#        self.register(
-#            "uu_x", power=1,
-#            fn=lambda self, u, x, y, a, cg: u * (self.u_x(u, x, cg) / a)
-#        )
-#
-#        # 2 u * (u_x/a)  (redundant)
-#        self.register(
-#            "2uu_x", power=1,
-#            fn=lambda self, u, x, y, a, cg: 2.0 * u * (self.u_x(u, x, cg) / a)
-#        )
-#
 # ==== PDE Extractor ====
 def extract_symbolic_pde_deep(
     trainer,
@@ -1230,27 +1013,26 @@ def print_args(args, title="Run config"):
     bar = "-" * (width + 2 + max(len(str(v)) for v in d.values()))
     print(f"\n{title}\n{bar}\n" + "\n".join(lines) + f"\n{bar}\n")
 
-def make_tag(params: dict, keys=None):
-    """Stable tag from selected hyperparams (sorted keys)."""
-    if keys is None:
-        keys = sorted(params.keys())
-    parts = [f"{k}={params[k]}" for k in keys]
-    return "__".join(parts).replace(" ", "")
-
-def ensure_dir(p: Path):
-    p.mkdir(parents=True, exist_ok=True)
+def make_tag(args, keys=("epochs","batch_size","noise","stride_t","stride_x","part_num","which_part","lam_tv","tv_type","lam_reg","lam_pde","lam_data")):
+    parts = []
+    for k in keys:
+        v = getattr(args, k)
+        if isinstance(v, (list, tuple)):
+            v = "-".join(map(str, v))
+        parts.append(f"{k}={v}")
+    return "__".join(parts)
 
 def savefig_atomic(fig_path):
     fig_path = Path(fig_path)
     if fig_path.suffix.lower() != ".pdf":
         fig_path = fig_path.with_suffix(".pdf")
-    ensure_dir(fig_path.parent)
+    fig_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Get a temp pathname, then close the fd so savefig can open it on Windows
     fd, tmp_name = tempfile.mkstemp(dir=fig_path.parent, suffix=".pdf")
     os.close(fd)
 
-    # Note: dpi is ignored for vector elements in PDF; keep it only if you rasterize parts
+    # Note: dpi is ignored for vector elements in PDFs
     plt.savefig(tmp_name, format="pdf", bbox_inches="tight")
     os.replace(tmp_name, fig_path)  # atomic replace on same filesystem
     plt.close()
@@ -1259,7 +1041,7 @@ def save_npy_atomic(path: Path, arr):
     path = Path(path)
     if path.suffix == "":
         path = path.with_suffix(".npy")
-    ensure_dir(path.parent)
+    path.parent.mkdir(parents=True, exist_ok=True)
 
     # Create temp path, close fd so numpy can open it on Windows
     fd, tmp_name = tempfile.mkstemp(dir=str(path.parent), suffix=".npy")
@@ -1269,67 +1051,6 @@ def save_npy_atomic(path: Path, arr):
         np.save(f, arr)
 
     os.replace(tmp_name, str(path))
-
-def run_one(trainer_factory, batch_fn_factory, *, params, out_root="runs", tag_keys=("epochs","batch_size","noise_std")):
-    tag = make_tag(params, keys=tag_keys)  # e.g., "batch_size=32__epochs=10000__noise_std=0.05"
-    SCRIPT_DIR = Path(__file__).resolve().parent
-    run_dir = Path(SCRIPT_DIR/out_root) / tag            # <- no timestamp; will overwrite files in here
-    ensure_dir(run_dir)
-    print(f"cwd: {run_dir}\n")
-
-    trainer = trainer_factory()
-    batch_fn = batch_fn_factory(batch_size=params["batch_size"], noise_std=params["noise_std"])
-
-    lt, ld, lp, ll = trainer.train(
-        epochs=params["epochs"],
-        batch_fn=batch_fn,
-        train_data=True,
-        train_pde=True,
-        log_every=max(1, params["epochs"] // 10),
-    )
-
-    final_oper = extract_symbolic_pde_deep(trainer)
-    print(final_oper)
-    # save raw arrays (overwrite)
-    save_npy_atomic(run_dir/"loss_total.npy", lt)
-    save_npy_atomic(run_dir/"loss_data.npy",  ld)
-    save_npy_atomic(run_dir/"loss_pde.npy",   lp)
-    save_npy_atomic(run_dir/"loss_l1.npy",    ll)
-
-    # metadata (overwrite)
-    meta = dict(params=params,
-                feature_names=getattr(trainer, "feature_names", []),
-                feature_powers=getattr(trainer, "feature_powers", []),
-                a_hat=float(torch.exp(trainer.log_a).detach().cpu()),
-                saved_at=time.strftime("%Y-%m-%d %H:%M:%S"),
-                extracted_pde=final_oper
-                )
-    with open(run_dir/"meta.json", "w") as f:
-        json.dump(meta, f, indent=2)
-
-    # plot (smoothed)
-    def plot_smoothed(arr, label, target_points=1000):
-        arr = torch.tensor(arr)
-        n = arr.numel()
-        k = max(1, n // target_points)
-        m = (n // k) * k
-        if m < n:
-            arr = arr[:m]
-        arr = arr.view(-1, k).mean(dim=1)
-        x = torch.arange(arr.numel()) * k
-        plt.plot(x, arr, label=label)
-
-    plt.figure()
-    plot_smoothed(lt, "total")
-    plot_smoothed(lp, "pde")
-    plot_smoothed(ld, "data")
-    plot_smoothed(ll, "l1 penalty")
-    plt.xlabel("epoch"); plt.ylabel("loss (chunk-avg)")
-    plt.title(tag)
-    plt.legend(loc="best"); plt.grid(True, alpha=0.3); plt.tight_layout()
-
-    # single, fixed filename -> overwrite when params repeat
-    savefig_atomic(run_dir/"loss_plot.png")
 
 def u_over_domain(trainer_u, t_np, x_np):
     device = next(trainer_u.parameters()).device
@@ -1469,74 +1190,52 @@ def snapshot_comp(
 
     return fig, fig_hm, payload
 
-def patch_trainer_with_symnet(
-    trainer,
-    primitive_names=("u","u_x","u_xx"),
-    primitive_orders=(0,1,2),
-    product_layers=(8,8),
-    skip=True,                      # <— your `skip` flag
-    # learning rates per group:
-    lr_u=1e-3,
-    lr_prod=1e-2,                   # W1/W2 (make these larger so products learn)
-    lr_gate=1e-2,                   # gates (open/close products)
-    lr_readout=3e-2,                # final linear head (smaller so it doesn’t hog)
-    lr_skip=3e-4,                   # skip matrices (if enabled)
-    lr_a=5e-4                       # derivative-order scaler
-):
-    # 1) build SymNet with or without linear skips
-    sym = SymNetHead(
-        primitive_names=primitive_names,
-        primitive_orders=primitive_orders,
-        product_layers=product_layers,
-        add_linear_skip=skip,
-        readout_bias=True
-    ).to(trainer.device)
+def coeff_err_plot(CE, run_dir, names=None):
+    '''
+    coeffs are provided by the v-net. We compare them to the target coeffs provided by user.
+    Input: plotting boolean, CE: np.ndarray [epochs, n_terms], names: list of str
+    Output: coeff error plot saved to run_dir
+    '''
+    if CE is None:
+        return
+    plt.figure()
+    for j in range(CE.shape[1]):
+        label = names[j] if names and j < len(names) else f"term{j}"
+        plt.plot(CE[:, j], label=f"|Δ {label}|")
+    # overall L2
+    l2 = np.linalg.norm(CE, axis=1)
+    plt.plot(l2, linestyle="--", label="L2(all terms)")
+    plt.xlabel("epoch"); plt.ylabel("coefficient error")
+    plt.legend(); plt.tight_layout()
+    savefig_atomic(run_dir/"coef_errors.pdf")
 
-    trainer.v = SymNetAdapter(sym)
-    trainer.selected_derivs = list(primitive_names)
+def general_plot(list_of_lists, ylabel, title, filename, run_dir):
+    plt.figure()
+    assert all(len(lst) == len(list_of_lists[0]) for lst in list_of_lists), \
+        f"All lists must have the same length, got {[len(lst) for lst in list_of_lists]}"
+    for lst in list_of_lists:
+        plt.plot(torch.arange(0, len(lst)), torch.tensor(lst).view(len(lst), -1).mean(dim=1)[:len(lst)])
+    plt.yscale('log')
+    plt.xlabel('epoch')
+    plt.ylabel(ylabel)
+    plt.title(title)
+    plt.legend(loc='best')
+    savefig_atomic(run_dir/filename)
 
-    # 2) collect param groups
-    u_params      = list(trainer.u.parameters())
-    readout_params= list(sym.readout.parameters())
-    a_params      = [sym.log_a]
-
-    prod_params, gate_params, skip_params = [], [], []
-    for layer in sym.layers:
-        prod_params += [layer.W1, layer.W2]          # product builders
-        gate_params += [layer.gate]                  # gates
-        if hasattr(layer, "skip"):                   # optional skips
-            skip_params += list(layer.skip.parameters())
-
-    # 3) build optimizer with separate LRs
-    param_groups = [
-        {"params": u_params,       "lr": lr_u},
-        {"params": prod_params,    "lr": lr_prod},
-        {"params": gate_params,    "lr": lr_gate},
-        {"params": readout_params, "lr": lr_readout},
-        {"params": a_params,       "lr": lr_a},
-    ]
-    if skip_params:
-        param_groups.append({"params": skip_params, "lr": lr_skip})
-
-    trainer.optimizer = torch.optim.Adam(param_groups)
-    return trainer
-
-# small helper: quiet training (coeff_plot=False avoids linear-head extractor)
-def train_quiet(trainer, epochs, batch_fn, train_data=True, train_pde=True, log_every=200):
-    lt, ld, lp, ll = [], [], [], []
-    for ep in range(epochs):
-        t, x, y = batch_fn()
-        out = trainer.step(t, x, y, train_data=train_data, train_pde=train_pde, coeff_plot=False)
-        lt.append(out["total_loss"]); ld.append(out["data_loss"])
-        lp.append(out["pde_loss"]);   ll.append(out["l1_penalty"])
-        if (ep % log_every) == 0:
-            print(f"Epoch {ep}: total={out['total_loss']:.3e}  data={out['data_loss']:.3e}  "
-                  f"pde={out['pde_loss']:.3e}  a={out['a_hat']:.3g}")
-    return lt, ld, lp, ll
+def make_nonlinear_batch(batch_size, noise, t_torch, x_torch, y_torch, y_noisy_torch):
+    N = t_torch.shape[0]
+    idx = torch.randint(0, N, (batch_size,), device=device)
+    t_batch = t_torch[idx][:, None]
+    x_batch = x_torch[idx][:, None]
+    y_src   = y_noisy_torch if (noise and noise > 0) else y_torch
+    y_batch = y_src[idx][:, None]
+    
+    return t_batch.float(), x_batch.float(), y_batch.float(), y_torch[idx][:, None].float()
 
 # ==============================
 # Main: training setup
 # ==============================
+
 def main():
     parser = argparse.ArgumentParser(description="PDE learner with CUDA support (Burgers dataset)")
     parser.add_argument("--epochs", type=int, default=1000, help="Number of training epochs (default: 10000)")
@@ -1566,22 +1265,14 @@ def main():
     parser.add_argument("--true_pde", type=dict, default={"uu_x": -1.0, "u_xx": 0.02}, help="True PDE terms for coeff error calculation")
     args = parser.parse_args()
 
-    print_args(args)
+    print_args(args) # display run config (hyperparamters, etc.)
 
-    def make_tag(args, keys=("epochs","batch_size","noise","stride_t","stride_x","part_num","which_part","lam_tv","tv_type","lam_reg","lam_pde","lam_data")):
-        parts = []
-        for k in keys:
-            v = getattr(args, k)
-            if isinstance(v, (list, tuple)):
-                v = "-".join(map(str, v))
-            parts.append(f"{k}={v}")
-        return "__".join(parts)
-    
+    # save file setup
     tag = make_tag(args)  # e.g., "batch_size=32__epochs=10000__noise_std=0.05"
     SCRIPT_DIR = Path(__file__).resolve().parent
     ts = time.strftime("%Y%m%d-%H%M%S")
     run_dir = Path(SCRIPT_DIR/"runs") / f"{args.noise}" / tag / ts
-    ensure_dir(run_dir)
+    run_dir.mkdir(parents=True, exist_ok=True)
     print(f"Figures saved to: {run_dir}\n")
 
     # === Main (no parse) ===
@@ -1595,15 +1286,6 @@ def main():
     y_torch       = torch.from_numpy(y_np).to(device)
     y_noisy_torch = torch.from_numpy(y_noisy_np).to(device)
 
-    def make_nonlinear_batch(batch_size=args.batch_size, noise=args.noise):
-        N = t_torch.shape[0]
-        idx = torch.randint(0, N, (batch_size,), device=device)
-        t_batch = t_torch[idx][:, None]
-        x_batch = x_torch[idx][:, None]
-        y_src   = y_noisy_torch if (noise and noise > 0) else y_torch
-        y_batch = y_src[idx][:, None]
-
-        return t_batch.float(), x_batch.float(), y_batch.float(), y_torch[idx][:, None].float()
 
     u_config = dict(n_layers=3, hidden_size=64)
     v_config = dict(input_size=len(args.selected_derivs), n_layers=1, hidden_size=1, linear_only=True)
@@ -1617,37 +1299,11 @@ def main():
     # Phase A: u only pretrain 
     lt, ld, lp, ll, ltv, a_vals, pt_resid, pt_data, grad_a, grad_u, grad_v, CE, names = trainer_nl.train(
         epochs=args.epochs,
-        batch_fn=make_nonlinear_batch,
+        batch_fn=make_nonlinear_batch(args.batch_size, args.noise),
         coeff_plot=True,
         log_every=args.log_every,
         coef_gt=args.target
     )
-
-    ## Phase B: Flash coeffs with least square
-    #trainer_nl.elastic_flash(
-    #    batch_fn= make_nonlinear_batch,
-    #    num_batches=512,     # bigger cache → steadier coefficients
-    #    lambda1=5e-4,        # try 1e-4..1e-2, higher → sparser
-    #    lambda2=1e-4,        # small ridge to tame collinearity
-    #    standardize=True,
-    #    max_iter=2000,
-    #    tol=1e-6,
-    #    verbose=True
-    #)
-    trainer_nl.set_lrs(lr_u=1e-3, lr_v=5e-4, lr_a=5e-4)
-    u_pred = u_over_domain(trainer_nl.u, t_np, x_np)
-    u_diff, max_diff = u_minus_true(u_pred, t_np, x_np, y_np)
-
-    trainer_nl.set_lrs(lr_u=1e-3, lr_v=5e-4, lr_a=5e-4)
-
-    #Phase C: resume training w/ low lr
-    #lt, ld, lp, ll, ltv, CE, names = trainer_nl.train(
-    #    epochs=args.epochs,
-    #    batch_fn=make_nonlinear_batch,
-    #    log_every=args.log_every, 
-    #    coef_gt=args.target,
-    #    coeff_plot=args.coeff_plot
-    #)
 
     save_npy_atomic(run_dir/"loss_total.npy", lt)
     save_npy_atomic(run_dir/"loss_data.npy",  ld)
@@ -1655,24 +1311,7 @@ def main():
     save_npy_atomic(run_dir/"loss_l1.npy",    ll)
     save_npy_atomic(run_dir/"loss_l1.npy",    ltv)
 
-
     w1,b1,names1=trainer_nl._pdenet_get()
-
-
-    # Final flash to tidy up (compare ridge to gd)
-    trainer_nl.elastic_flash(
-        batch_fn= make_nonlinear_batch,
-        num_batches=512,     # bigger cache → steadier coefficients
-        lambda1=5e-4,        # try 1e-4..1e-2, higher → sparser
-        lambda2=1e-4,        # small ridge to tame collinearity
-        standardize=True,
-        max_iter=2000,
-        tol=1e-6,
-        verbose=True
-    )
-
-    w2,b2,names2=trainer_nl._pdenet_get()
-
 
     # metadata (overwrite)
     meta = dict(
@@ -1680,7 +1319,6 @@ def main():
         feature_names=getattr(trainer_nl, "feature_names", []),
         feature_powers=getattr(trainer_nl, "feature_powers", []),
         feature_coeffs=str([w1,b1]),
-        feature_coeffs_flash=str([w2,b2]),
         a_hat=float(torch.exp(trainer_nl.log_a).detach().cpu()),
         saved_at=time.strftime("%Y-%m-%d %H:%M:%S"),
         linf_diff=max_diff
@@ -1689,43 +1327,12 @@ def main():
     with open(run_dir/"meta.json", "w") as f:
         json.dump(meta, f, indent=2)
 
-
-    plt.figure()
-    included = len(lt)
-    window = max(1, included // 200)
-    #plt.plot(torch.arange(0, included), torch.tensor(lt).view(included, -1).mean(dim=1)[:included], label='current induced residual')
-    plt.plot(torch.arange(0, included), torch.tensor(lp).view(included, -1).mean(dim=1)[:included], label='current induced residual')
-    plt.plot(torch.arange(0, included), torch.tensor(ld).view(included, -1).mean(dim=1)[:included], label='data')
-    plt.plot(torch.arange(0, included), torch.tensor(ll).view(included, -1).mean(dim=1)[:included], label='l1 penalty')
-    plt.plot(torch.arange(0, included), torch.tensor(ltv).view(included, -1).mean(dim=1)[:included], label='tv penalty')
-    plt.plot(torch.arange(0, included), torch.tensor(a_vals).view(included, -1).mean(dim=1)[:included], label='a value')
-    #plt.plot(torch.arange(0, included), torch.tensor(pt_resid).view(included, -1).mean(dim=1)[:included], label='pred truth resid')
-    plt.plot(torch.arange(0, included), torch.tensor(pt_data).view(included, -1).mean(dim=1)[:included], label='pred truth data')
-    plt.yscale('log')
-    plt.legend(loc='best')
-    savefig_atomic(run_dir/"loss_plot.png")
-    
-    plt.figure()
-    plt.plot(torch.arange(0, included), torch.tensor(grad_a).view(included, -1).mean(dim=1)[:included], label='grad a')
-    plt.plot(torch.arange(0, included), torch.tensor(grad_u).view(included, -1).mean(dim=1)[:included], label='grad u')
-    plt.plot(torch.arange(0, included), torch.tensor(grad_v).view(included, -1).mean(dim=1)[:included], label='grad v')
-    plt.yscale('log')
-    plt.legend(loc='best')
-    savefig_atomic(run_dir/"grads_plot.png")
-
-    # Coefficient error plot   
-    if CE is not None:
-        plt.figure()
-        for j in range(CE.shape[1]):
-            label = names[j] if names and j < len(names) else f"term{j}"
-            plt.plot(CE[:, j], label=f"|Δ {label}|")
-        # overall L2
-        l2 = np.linalg.norm(CE, axis=1)
-        plt.plot(l2, linestyle="--", label="L2(all terms)")
-        plt.xlabel("epoch"); plt.ylabel("coefficient error")
-        plt.legend(); plt.tight_layout()
-        savefig_atomic(run_dir/"coef_errors.pdf")
-    
+    #plots for losses and gradients  
+    list_of_losses = [lt, lp, ld, ll, ltv]
+    general_plot(list_of_losses, 'loss', 'Loss components over epochs', 'loss_components.png', run_dir)
+    list_of_grads = [grad_a, grad_u, grad_v]
+    general_plot(list_of_grads, 'gradient norm', 'Gradient norms over epochs', 'gradients.png', run_dir)
+    coeff_err_plot(CE, run_dir, names)
     fig, fig_hm, load = snapshot_comp(
         trainer_nl.u, args.stride_x, args.stride_t,
         y_noisy_np, y_np, t_np, x_np,
