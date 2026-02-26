@@ -11,11 +11,14 @@ import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import torch.nn.functional as F
 
 # file keeping stuff
-import os, json, tempfile
+import os, tempfile
 from pathlib import Path
-from collections import OrderedDict, List, Optional, Iterable
+from collections import OrderedDict
+from dataclasses import dataclass
+from typing import Callable, Dict, List, Optional, Tuple, Iterable, Set, Union
 
 torch.backends.cudnn.benchmark = True
 torch.set_float32_matmul_precision("high")  # PyTorch 2.x, speeds GEMMs
@@ -31,7 +34,7 @@ print("0902; 10-08-25")
 # ==============================
 # Model definitions
 # ==============================
-# === MLPs ===
+# === MLP, EQL, FEATLIB ===
 
 class Sin(nn.Module):
     def forward(self, input):
@@ -60,60 +63,24 @@ class SimpleMLP(nn.Module):
     def forward(self, t, x):
         input_tensor = torch.cat((t, x), dim=1)  # Concatenate along feature axis
         return self.model(input_tensor)
-
+    
 class symMLP(nn.Module):
-    def __init__(self, input_size, n_layers, hidden_size, linear_only=False, bias=False):
-        super(symMLP, self).__init__()
-        assert n_layers >= 1, "n_layers must be at least 1"
+    """
+    Readout-only baseline, EQL-swappable contract.
 
-        layers = []
-        if n_layers == 1:
-            # Direct input -> output
-            layers.append(nn.Linear(input_size, 1, bias=bias))
-        else:
-            # First layer: input -> hidden
-            layers.append(nn.Linear(input_size, hidden_size))
-            if not linear_only:
-                layers.append(nn.ReLU())
-            # Intermediate layers
-            for _ in range(n_layers - 2):
-                layers.append(nn.Linear(hidden_size, hidden_size))
-                if not linear_only:
-                    layers.append(nn.ReLU())
-            # Final layer
-            layers.append(nn.Linear(hidden_size, 1))
+    v(F) = readout([F])
 
-        self.model = nn.Sequential(*layers)
+    - Keeps readout shape (K -> 1), bias=False
+    - Simple linear transformation of features acted on by optimizer (GD, Lasso, etc.)
 
-    def forward(self, x):   
-        return self.model(x)
-   
-    def stats(self, with_grads=False):
-        """Layer stats + effective input→output coefficients and their stats."""
-        out = OrderedDict()
-        for i, m in enumerate(self.model):
-            if isinstance(m, nn.Linear):
-                out[f"layer{i}.weight"] = _tensor_stats(m.weight)
-                if m.bias is not None:
-                    out[f"layer{i}.bias"] = _tensor_stats(m.bias)
-                if with_grads and m.weight.grad is not None:
-                    out[f"layer{i}.weight_grad"] = _tensor_stats(m.weight.grad)
-                if with_grads and m.bias is not None and m.bias.grad is not None:
-                    out[f"layer{i}.bias_grad"] = _tensor_stats(m.bias.grad)
-        eff = self.effective_coeffs()
-        out["effective_coeffs_vector"] = {
-            "values": eff.detach().cpu().numpy().tolist(),
-            **_tensor_stats(eff)
-        }
-        return out
+    """
+    def __init__(self, in_dim: int, prod_dim: int = 2, bias: bool = False):
+        super().__init__()
+        self.readout = nn.Linear(in_dim, 1, bias=False)
 
-    def effective_coeffs(self):
-        """Return a single Linear-equivalent weight vector for input features (ignores bias comp)."""
-        layers = [L for L in self.model if isinstance(L, nn.Linear)]
-        W = layers[0].weight.detach()
-        for L in layers[1:]:
-            W = L.weight.detach() @ W
-        return W.flatten()  # shape [n_features]
+    def forward(self, feats: torch.Tensor) -> torch.Tensor:
+        Y = torch.cat([feats], dim=1)  # (N, K+1)
+        return self.readout(Y)              # (N, 1)
 
 # === Feature Library ===
 
@@ -124,10 +91,9 @@ class FeatureTensorOut:
     scales: torch.Tensor             # (K,) detached; 1.0 if not normalized
     raw_cols: Optional[torch.Tensor] = None  # (B,K) raw (unnormalized) if keep_raw=True
 
-
 class FeatureTensor:
     """
-    Builds ONLY the primitive feature columns: "u", "u_x", "u_xx".
+    Builds feature columns: "u", "u_x", "u_xx", ...
     Any requested non-primitive terms are ignored (with a warning).
 
     Expects u_out shape (B,1) and x tensor (B,1) with requires_grad=True
@@ -148,7 +114,7 @@ class FeatureTensor:
 
         # runtime artifacts
         self.names: List[str] = []
-        self.scales: Optional[torch.Tensor] = None  # (K,)
+        self.scales: Optional[torch.Tensor] = None
 
     def _l2_detached(self, col: torch.Tensor) -> torch.Tensor:
         # scalar (detached)
@@ -169,11 +135,11 @@ class FeatureTensor:
     ) -> FeatureTensorOut:
         _ = (t, y)  # explicit ignore (keeps signature stable)
 
-        allowed = {"u", "u_x", "u_xx"}
+        allowed = {"u", "u_x", "u_xx", "uu_x"}
         requested = [s for s in self.terms if s in allowed]
         ignored = [s for s in self.terms if s not in allowed]
         if ignored:
-            print(f"Ignoring non-primitive terms: {ignored}")
+            print(f"Ignoring non-primitive terms: {ignored} [c:FeatureTensor]")
 
         if not requested:
             raise RuntimeError(f"No primitive features requested (allowed: {sorted(allowed)})")
@@ -205,15 +171,19 @@ class FeatureTensor:
                 raw_list.append(raw_)
 
         # Cache derivatives
-        if ("u_x" in need or "u_xx" in need) and x is None:
+        if ("u_x" in need or "u_xx" in need or "uu_x" in need) and x is None:
             raise ValueError("Requested x-derivative feature but x is None.")
 
-        u_x = u_xx = None
-        if "u_x" in need or "u_xx" in need:
-            u_x = self._grad1(u_out, x)
-        if "u_xx" in need:
-            u_xx = self._grad1(u_x, x)
+        
+        u_x = self._grad1(u_out, x)
+        u_xx = self._grad1(u_x, x)
+        uu_x = u_out * u_x
 
+        self.u_raw = u_out
+        self.ux_raw = u_x
+        self.uxx_raw = u_xx
+        self.uux_raw = uu_x
+            
         # Build primitives
         if "u" in need:
             add("u", u_out, normalize_col=True)
@@ -221,7 +191,8 @@ class FeatureTensor:
             add("u_x", u_x, normalize_col=True)
         if "u_xx" in need:
             add("u_xx", u_xx, normalize_col=True)
-
+        if "uu_x" in need: 
+            add("uu_x", uu_x, normalize_col=True)
         if not feats:
             raise RuntimeError("No features produced. Check 'terms' and provided coords.")
 
@@ -230,9 +201,8 @@ class FeatureTensor:
 
         raw_cols = torch.cat(raw_list, dim=1) if self.keep_raw else None  # (B,K) or None
 
-        # save artifacts
-        self.names = names
-        self.scales = scales
+        # save artifacts and primitives for inspection
+        self.scales = scales.detach()  # save scales for inspection (detached)
 
         return FeatureTensorOut(F=F, names=names, scales=scales, raw_cols=raw_cols)
 
@@ -252,365 +222,110 @@ class EQL(nn.Module):
 
     def forward(self, feats):
         Z = self.linear(feats)  # (N, prod_dim)
+        self.preop_ns = Z  # save for inspection
         prod_neuron = torch.prod(Z, dim=1, keepdim=True)  # (N,1)
-        Y = torch.cat([feats, prod_neuron], dim=1)        # (N, in_dim+1)
-        return self.readout(Y)
+        self.postop_ns = prod_neuron  # save for inspection
+        Y_layer = torch.cat([feats, prod_neuron], dim=1)        # (N, in_dim+1)
+        self.Y = Y_layer  # save for inspection
+        return self.readout(Y_layer)
 
 
 # === Trainer ===
-def _soft_thresh(x, lam):
-    # elementwise soft-threshold
-    return torch.sign(x) * torch.clamp(torch.abs(x) - lam, min=0.0)
+@dataclass
+class TrainerConfig:
+    lr: float = 1e-3
+    lambda_pde: float = 1.0
+    lambda_reg: float = 1e-3
+    lambda_tv: float = 1e-4
+    lambda_data: float = 1.0
+    selected_derivs: tuple[str, ...] = ()
+    device: torch.device = torch.device("cpu")
 
-def heatmap(matrix):
-    # Column correlation heatmap for A
-    corr = np.corrcoef(matrix, rowvar=False)
-    fig, ax = plt.subplots(figsize=(4, 4))
-    im = ax.imshow(corr, cmap='coolwarm', vmin=-1, vmax=1)
-    ax.set_xticks(np.arange(corr.shape[0])); ax.set_yticks(np.arange(corr.shape[0]))
-    ax.set_xticklabels([f"col{i}" for i in range(corr.shape[0])])
-    ax.set_yticklabels([f"col{i}" for i in range(corr.shape[0])])
-    plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
-    for i in range(corr.shape[0]):
-        for j in range(corr.shape[1]):
-            ax.text(j, i, f"{corr[i, j]:.2f}", ha="center", va="center", color="black")
-    ax.set_title("Column correlation heatmap of A")
-    fig.colorbar(im, ax=ax)
-    plt.tight_layout()
-    plt.show()
+class PDETrainer:
+    """
+    Consumes existing models; does not construct them.
+    Think of it as an operator on (u_model, v_model).
+    """
+    def __init__(
+        self,
+        u_model: nn.Module,
+        v_model: nn.Module,
+        cfg: TrainerConfig,
+        *,
+        feature_builder: Optional[Callable] = None
+    ):
+        self.cfg = cfg
+        self.device = cfg.device
 
-class PDETrainerNonlinear:
-    def __init__(self, u_config, v_config, lr=1e-3, lambda_pde=1.0, lambda_reg=1e-3, lambda_tv=1e-4, lambda_data=1.0, selected_derivs=(), device=device, true_pde=None):
-        self.device = device
-        self.u = SimpleMLP(**u_config).to(self.device)
-        self.v = EQL(**v_config).to(self.device)
-        #self.v = symMLP(**v_config).to(self.device)
-        self.lambda_pde = lambda_pde
-        self.lambda_reg = lambda_reg
-        self.lambda_data = lambda_data
-        self.selected_derivs = list(selected_derivs)
-        self.lambda_tv = lambda_tv
+        self.u = u_model.to(self.device)
+        self.v = v_model.to(self.device)
+
+        self.selected_derivs = cfg.selected_derivs
+
+        # If caller didn't inject a feature_builder, build a default one.
+        # WARNING: this only supports primitive terms
+        if feature_builder is None:
+            self.feature_tens = FeatureTensor(
+                terms=self.selected_derivs,
+                normalize=cfg.feature_normalize,
+            )
+            self.feature_builder = self.feature_tens.build
+        else:
+            self.feature_tens = None
+            self.feature_builder = feature_builder
+
         params = list(self.u.parameters()) + list(self.v.parameters())
-        self.optimizer = optim.Adam(params, lr=lr)
+        self.optimizer = optim.Adam(params, lr=cfg.lr)
         self.mse = nn.MSELoss()
-        self.true_pde = true_pde
-        self.feature_tensor = FeatureTensor(terms=selected_derivs, normalize=True)
 
-    def _grad_norm_module(self, module):
-        total = 0.0
-        for p in module.parameters():
-            if p.grad is not None:
-                total += p.grad.pow(2).mean()
-        if total == 0.0:
-            return 0.0
-        return float(total.sqrt().item())
+    def step(self, t, x, u_noisy, u_clean, tv_fn: Optional[Callable] = None):
+        t = t.to(self.device).requires_grad_(True)
+        x = x.to(self.device).requires_grad_(True)
+        u_noisy = u_noisy.to(self.device)
+        u_clean = u_clean.to(self.device)
 
-    def _build_features(self, u_out, x=None, y=None, terms=None, eps=1e-12):
-        """
-        Build library matrix F with per-feature norm normalization.
+        u_out = self.u(t, x)  
 
-        New contract:
-        - F_i = raw_i / scale_i
-        - scales[i] = ||raw_i||_2  (detached scalar, >= eps)
-        - Return: F [batch, n_feat], names [list[str]], scales [list[float or tensor]]
-        """
-        if terms is None:
-            raise RuntimeError("No terms provided ~ _build_features requires 'terms' argument")
+        # data loss
+        loss_data = self.mse(u_out, u_noisy)
+    
+        # library + PDE loss
+        features = self.feature_builder(u_out,x=x)
+        self.F, self.feature_names, self.feature_scales = features.F, features.names, features.scales
+       
+        self.u_t = torch.autograd.grad(u_out, t, grad_outputs=torch.ones_like(u_out), create_graph=True)[0]
+        v_out = self.v(self.F)
+        loss_pde = self.mse(self.u_t, v_out)
 
-        feats, names, scales = [], [], []
-
-        def Lp_norm_detached(t: torch.Tensor, pth=2) -> torch.Tensor:
-            # scalar Lp norm over all entries
-            return t.detach().reshape(-1).norm(p=pth).clamp_min(eps)
-
-        def add(name: str, raw: torch.Tensor, normalize: bool = True, scale_override: torch.Tensor | None = None):
-            if raw is None:
-                return
-            if normalize:
-                s = scale_override if scale_override is not None else Lp_norm_detached(raw, pth=2)
-                col = raw / s
-            else:
-                s = torch.tensor(1.0, device=raw.device, dtype=raw.dtype)
-                col = raw
-            feats.append(col)
-            names.append(name)
-            scales.append(s)
-
-        need = set(terms)
-
-        # ---- cache derivatives to avoid recomputation ----
-        u_x = u_xx = u_y = u_yy = None
-
-        if x is not None and ({"u_x","2u_x","u_xx","u_x_x","u_x_xx","uu_x","2uu_x"} & need):
-            u_x = torch.autograd.grad(u_out, x, grad_outputs=torch.ones_like(u_out), create_graph=True)[0]
-
-        if x is not None and ({"u_xx","u_x_xx"} & need):
-            u_xx = torch.autograd.grad(u_x, x, grad_outputs=torch.ones_like(u_x), create_graph=True)[0]
-
-        if y is not None and ({"u_y","u_yy"} & need):
-            u_y = torch.autograd.grad(u_out, y, grad_outputs=torch.ones_like(u_out), create_graph=True)[0]
-
-        if y is not None and ("u_yy" in need):
-            u_yy = torch.autograd.grad(u_y, y, grad_outputs=torch.ones_like(u_y), create_graph=True)[0]
-
-        # ---- build raw features ----
-        if "u" in need and x is not None:
-            add("u", u_out, normalize=True)
-
-        if "u_x" in need and x is not None:
-            add("u_x", u_x, normalize=True)
-
-        if "2u_x" in need and x is not None:
-            raw = 2 * u_x
-            add("2u_x", raw, normalize=True)
-
-        if "u_xx" in need and x is not None:
-            add("u_xx", u_xx, normalize=True)
-
-        if y is not None and "u_y" in need:
-            raw = u_y
-            add("u_y", raw, normalize=True)
-
-        if y is not None and "u_yy" in need:
-            raw = u_yy
-            add("u_yy", raw, normalize=True)
-
-        if "uu" in need:
-            add("uu", u_out * u_out, normalize=True)
-
-        if "u_x_x" in need and x is not None:
-            add("u_x_x", u_x * u_x, normalize=True)
-
-        if "u_x_xx" in need and x is not None:
-            add("u_x_xx", u_x * u_xx, normalize=True)
-
-        if "uu_x" in need and x is not None:
-            add("uu_x", u_out * u_x, normalize=True)
-
-        if "c" in need:
-            add("c", torch.ones_like(u_out), normalize=False)
-
-        F = torch.cat(feats, dim=1) if feats else None
-        if F is not None and F.device != self.device:
-            F = F.to(self.device)
-
-        return F, names, scales  
-
-    def _pdenet_get(self):
-        """
-        For EQL:
-          Z = A F + b
-          PROD = Π_j Z_j
-          v(F) = sum_i w_F[i] * F_i + w_P * PROD
-        where F are the normalized library columns built by FeatureTensor.
-        """
-        eql = self.v
-
-        # names/scales from last feature build
-        names = getattr(self, "feature_names", None)
-        scales = getattr(self, "feature_scales", None)
-        if names is None or scales is None:
-            raise RuntimeError("feature_names/feature_scales not set. Store ft.names/ft.scales on the trainer during step().")
-
-        # A,b
-        A = eql.linear.weight.detach().cpu().numpy()   # (prod_dim, K)
-        b = torch.tensor([0.0]*A.shape[0])
-        #b = eql.linear.bias.detach().cpu().numpy()     # (prod_dim,)
-
-        # readout weights: [w_F..., w_P]
-        w_readout = eql.readout.weight.detach().cpu().numpy()  # (K+1,)
-        w_inprod = eql.linear.weight.detach().cpu().numpy()
-
-        # no bias (readout has bias=False)
-        bias = 0.0
-        return names, scales.detach().cpu().numpy(), A, b, w_readout, w_inprod, bias
-
-    def _pde_truth(self, u_out, x=None, y=None): 
-        '''
-        ex: 
-        true_pde = {
-            'u_xx': 0.02, 
-            'uu_x': -1.0, 
-        }
-        F_true = dict_to_tensor(true_pde)
-        _pde_truth is dict_to_tensor
-        expected output (using _pde_truth) so that u_t - F_true@F works: 
-        '''
-
-        terms = list(self.true_pde.keys())
-        coeffs = torch.tensor([self.true_pde[t] for t in terms], device=self.device, dtype=torch.float32).view(-1, 1)
-        F_true, _, __ = self._build_features(u_out, x=x, y=y, terms=terms)
-        if F_true is None:
-            raise RuntimeError("No features were produced; check provided term library (reminder: _build_feats(terms=...))")
-        
-        RHS = F_true @ coeffs  # [B, 1]
-
-        return RHS
-
-    def set_lrs(self, lr_u=None, lr_v=None, lr_a=None):
-    # param_groups: 0=u, 1=v, 2=a
-        if lr_u is not None: self.optimizer.param_groups[0]["lr"] = lr_u
-        if lr_v is not None: self.optimizer.param_groups[1]["lr"] = lr_v
-        if lr_a is not None: self.optimizer.param_groups[2]["lr"] = lr_a
-
-    def set_lambdas(self, lambda_pde=None, lambda_reg=None, lambda_a=None, lambda_tv=None, lambda_data=None):
-        if lambda_pde is not None: self.lambda_pde = lambda_pde
-        if lambda_reg is not None: self.lambda_reg = lambda_reg
-        if lambda_a is not None:   self.lambda_a   = lambda_a
-        if lambda_tv is not None:  self.lambda_tv  = lambda_tv
-        if lambda_data is not None:self.lambda_data= lambda_data
-
-    def tv1d_space(self, u_fn, t, x, eps=1e-6, reduce="mean"):
-        """
-        Smoothed TV  in space:  E[ sqrt(u_x^2 + eps^2) ]
-        u_fn : callable(t, x) -> u  (N,1)
-        t,x  : (N,1) tensors with requires_grad as needed
-        eps  : Charbonnier smoothing (avoid nondifferentiability at 0)
-        reduce : "mean" | "sum" | None  (returns tensor if None)
-        """
-        u = u_fn(t, x)
-        ones = torch.ones_like(u)
-        ux = torch.autograd.grad(u, x, grad_outputs=ones,
-                                 create_graph=True, retain_graph=True)[0]
-        tv = torch.sqrt(ux**2 + eps**2)
-        if reduce == "mean":  return tv.mean()
-        if reduce == "sum":   return tv.sum()
-        return tv
-
-    def step(self, t, x, u_data, u_data_clean, coeff_plot=False, target=[], tv_type="u"):
-        # processing
-        t = t.to(self.device)
-        x = x.to(self.device)
-        u_data = u_data.to(self.device)
-        u_data_clean = u_data_clean.to(self.device)
-        t.requires_grad_(True)
-        x.requires_grad_(True)
-        u_out = self.u(t, x)
-        loss = torch.tensor(0.0, device=self.device)
-        loss_data = self.mse(u_out, u_data)
-
-        #F, names, powers = self._build_features(u_out, x=x, y=None, terms=self.selected_derivs)
-        ft = self.feature_tensor.build(u_out, x=x)
-        
-        F, self.feature_names, self.feature_scales = ft.F, ft.names, ft.scales
-
-        assert F.shape[1] == self.v.linear.in_features, f"Feature dim mismatch: F has {F.shape[1]} cols but EQL expects {self.v.linear.in_features}"
-
-        #print(f'shape of F is {F.shape}')
-        #print(f'names is {names}\n powers is {powers}')
-
-        u_t = torch.autograd.grad(u_out, t, grad_outputs=torch.ones_like(u_out), create_graph=True)[0]
-        u_x = torch.autograd.grad(u_out, x, grad_outputs=torch.ones_like(u_out), create_graph=True)[0]
-
-        pred_true_data = self.mse(u_out, u_data_clean)
-        #pred_true_resid = self.mse(u_t, self._pde_truth(u_out, x=x, y=None) if self.true_pde is not None else torch.tensor(0.0, device=self.device))
-        pred_true_resid = torch.tensor([1.0])
-        v_out = self.v(F)
-        if tv_type == "u":
-            L_tv = self.tv1d_space(self.u, t, x, eps=1e-6, reduce="mean")
-        else: 
-            L_tv = self.tv1d_space(u_x, t, x, eps=1e-6, reduce="mean")
-
-        loss_pde = self.mse(u_t, v_out)
-        #print(u_t.shape, v_out.shape, F.shape)
+        # L1 on v
         l1 = sum(p.abs().sum() for p in self.v.parameters())
 
-        loss += self.lambda_data * loss_data
-        loss += self.lambda_pde * loss_pde
-        loss += self.lambda_reg * l1
-        loss += self.lambda_tv * L_tv
+        # TV term (optional injection)
+        loss_tv = torch.tensor(0.0, device=self.device)
+        if tv_fn is not None:
+            loss_tv = tv_fn(self.u, t, x)
+
+        loss = (
+            self.cfg.lambda_data * loss_data
+            + self.cfg.lambda_pde * loss_pde
+            + self.cfg.lambda_reg * l1
+            + self.cfg.lambda_tv * loss_tv
+        )
 
         self.optimizer.zero_grad()
         loss.backward()
-
-        r = (u_t - v_out).squeeze(1)      # (N,)
-        alignment = F.T @ r               # (K,)
-
-        theta_norms = torch.norm(F, dim=0) # (K,)
-        residual_norm = torch.norm(r)          # scalar
-        grad_pred = -2 * alignment
-
-        grad_u = self._grad_norm_module(self.u)
-        grad_v = self.v.parameters().__next__().grad.clone()
-
         self.optimizer.step()
-        coeff_error = None
-        if coeff_plot:
-            assert target is not None, "No target coeff provided"
-            # extract current physical coefficients
-            w_phys, b_phys, names = self._pdenet_get()  # ensure this RETURNS, not prints
-            curr_co = list(map(float, w_phys)) + [float(b_phys)]     # list[float]
-            target  = list(map(float, target))
-            assert len(curr_co) == len(target), "target length must match learned coeff length"
-            coeff_error = np.abs(np.array(curr_co, dtype=np.float64) -
-                                 np.array(target,  dtype=np.float64))  # shape [n_terms]
 
         return {
-            "total_loss": float(loss.item()),
-            "data_loss":  float(loss_data.item()),
-            "pde_loss":   float(loss_pde.item()),
-            "l1_penalty": float(l1.item()),
-            "tv_denoise": float(L_tv.item()),
-            "pred_true_data": float(pred_true_data.item()),
-            "pred_true_resid": float(pred_true_resid.item()),
-            
-            "grad_u": grad_u,
-            "grad_v": grad_v,
-
-            "coeff_error": coeff_error,   # None or np.ndarray [n_terms]
-            "coeff_names": names if coeff_plot else None,
-
-            "grad_pred": grad_pred.detach().cpu().numpy(),  # (K,)
-            "theta_norms": theta_norms.detach().cpu().numpy(),  # (K,)
-            "residual_norm": float(residual_norm.item())
+            "loss": float(loss.item()),
+            "loss_data": float(loss_data.item()),
+            "loss_pde": float(loss_pde.item()),
+            "l1": float(l1.item()),
+            "loss_tv": float(loss_tv.item()),
+            "feature_names": features.names,
+            "feature_scales": features.scales,
         }
-
-    def train(self, epochs, batch_fn, log_every=100, coef_gt=None, coeff_plot=False, t_dom=None, x_dom=None, y_dom=None, batch_size=1024):
-            lt, ld, lp, ll, ltv, pt_data, pt_resid, = [], [], [], [], [], [], []
-            coeff_err_hist = []   # list of np.ndarray [n_terms] per epoch
-            coeff_names_ref = None
-            grad_u_hist, grad_v_hist = [], []
-            grad_pred_hist, theta_norms_hist, residual_norm_hist = [], [], []
-
-
-            for epoch in range(epochs):
-                t, x, u_noisy, u_clean = batch_fn(batch_size=batch_size, t_torch=t_dom, x_torch=x_dom, y_torch=y_dom)
-                losses = self.step(t, x, u_noisy, u_clean,
-                                   target=coef_gt, coeff_plot=coeff_plot, tv_type="u")
-                lt.append(losses["total_loss"])
-                ld.append(losses["data_loss"])
-                lp.append(losses["pde_loss"])
-                ll.append(losses["l1_penalty"])
-                ltv.append(losses["tv_denoise"])
-                pt_data.append(losses["pred_true_data"])
-                pt_resid.append(losses["pred_true_resid"])
-                grad_u_hist.append(losses["grad_u"])
-                grad_v_hist.append(losses["grad_v"])
-                grad_pred_hist.append(losses["grad_pred"])
-                theta_norms_hist.append(losses["theta_norms"])
-                residual_norm_hist.append(losses["residual_norm"])
-
-                if coeff_plot and (losses["coeff_error"] is not None):
-                    if coeff_names_ref is None and losses.get("coeff_names") is not None:
-                        coeff_names_ref = list(losses["coeff_names"]) + ["bias"]
-                    coeff_err_hist.append(losses["coeff_error"])
-
-                if epoch % log_every == 0 or epoch == epochs - 1:
-                    print(f"Epoch {epoch}: total={lt[-1]:.4e}, data={ld[-1]:.4e}, pde={lp[-1]:.4e}, l1={ll[-1]:.4e}, ltv={ltv[-1]:.4e}, pt_resid={pt_resid[-1]:.4e}, pt_data={pt_data[-1]:.4e}")
-                    names, scales, A, b, w_RO, w_IP, bias = self._pdenet_get()
-                    
-                    print("Input to Product Neurons")
-                    print(w_IP)
-
-                    print("Readout Tensor Array")
-                    print(w_RO)   
-
-
-            # Turn coeff_err_hist into an array [epochs, n_terms] if collected
-            coeff_err_hist = (np.vstack(coeff_err_hist) if coeff_err_hist else None)
-
-            return lt, ld, lp, ll, ltv, pt_resid, pt_data, grad_u_hist, grad_v_hist, coeff_err_hist, coeff_names_ref, grad_pred_hist, theta_norms_hist, residual_norm_hist
-
+    
 # Burgers solver (NumPy, CPU)
 # ==============================
 @dataclass
