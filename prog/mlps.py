@@ -6,19 +6,19 @@ class Sin(nn.Module):
         return torch.sin(input)
 
 class SimpleMLP(nn.Module):
-    def __init__(self, n_layers, hidden_size):
+    def __init__(self, n_layers, hidden_size, act=Sin):
         super(SimpleMLP, self).__init__()
         assert n_layers >= 2, "n_layers must be at least 2"
 
         layers = []
         # First layer: input (2,) -> hidden_size
         layers.append(nn.Linear(2, hidden_size))
-        layers.append(Sin())
+        layers.append(act())
 
         # Hidden layers: (m -> m)
         for _ in range(n_layers - 2):
             layers.append(nn.Linear(hidden_size, hidden_size))
-            layers.append(Sin())
+            layers.append(act())
 
         # Final layer: (m -> 1)
         layers.append(nn.Linear(hidden_size, 1))
@@ -58,7 +58,6 @@ class EQL(nn.Module):
         self.linear = nn.Linear(in_dim, prod_dim, bias=bias)
         self.readout = nn.Linear(in_dim + 1, 1, bias=False)
 
-
     def forward(self, feats):
         Z = self.linear(feats)  # (N, prod_dim)
         self.preop_ns = Z  # save for inspection
@@ -67,3 +66,13 @@ class EQL(nn.Module):
         Y_layer = torch.cat([feats, prod_neuron], dim=1)        # (N, in_dim+1)
         self.Y = Y_layer  # save for inspection
         return self.readout(Y_layer)
+    
+    @torch.no_grad()
+    def effective_quadratic_matrix(self, symmetrize: bool = False):
+        if self.linear.out_features != 2:
+            raise ValueError("Only defined for prod_dim=2 in this EQL form.")
+        A = self.linear.weight          # (2, N)
+        w_p = self.readout.weight[0, -1]  # scalar (product term weight from readout layer)
+        M = w_p * torch.outer(A[0], A[1])  # (N, N)
+        return 0.5 * (M + M.T) if symmetrize else M
+

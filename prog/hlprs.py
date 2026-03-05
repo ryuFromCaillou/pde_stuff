@@ -229,14 +229,23 @@ def general_plot(list_of_lists, ylabel, title, filename, run_dir):
     plt.legend(loc='best')
     savefig_atomic(run_dir/filename)
 
-def make_nonlinear_batch(batch_size=1000, t_torch=None, x_torch=None, y_torch=None):
-    assert t_torch is not None and x_torch is not None and y_torch is not None, "Input tensors cannot be None"
-    N = t_torch.shape[0]
-    idx = torch.randint(0, N, (batch_size,), device=device)
-    t_batch = t_torch[idx][:, None]
-    x_batch = x_torch[idx][:, None]
-    y_src   = y_torch[idx][:, None]
-    y_batch = y_src[idx][:, None]
-    
-    return t_batch.float(), x_batch.float(), y_batch.float(), y_torch.float()
+def make_nonlinear_batch(batch_size=1000, t_torch=None, x_torch=None, y_clean=None, y_noisy=None):
+    idx = torch.randint(0, t_torch.shape[0], (batch_size,), device=device)
+    t = t_torch[idx][:, None].float().requires_grad_(True)
+    x = x_torch[idx][:, None].float().requires_grad_(True)
+    u_noisy = y_noisy[idx][:, None].float()
+    u_clean = y_clean[idx][:, None].float()
+    return t, x, u_noisy, u_clean
+
+
+def make_batch(batch_size=1000, t_torch=None, x_torch=None, y_clean=None, y_noisy=None):
+    return make_nonlinear_batch(
+        batch_size=batch_size,
+        t_torch=t_torch,
+        x_torch=x_torch,
+        y_clean=y_clean,
+        y_noisy=y_noisy,
+    )
+
+
 

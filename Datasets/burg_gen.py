@@ -118,7 +118,8 @@ def build_dataset_from_burgers(
         y_s = u2d[rows][:, cols].flatten()
 
         if noise_level and noise_level > 0:
-            y_noisy = y_s + noise_level * np.random.randn(*y_s.shape)
+            sigma = noise_level * np.std(y_s)
+            y_noisy = y_s + sigma * np.random.randn(*y_s.shape)
         else:
             y_noisy = y_s
 
