@@ -48,24 +48,27 @@ class symMLP(nn.Module):
         return self.readout(Y)              # (N, 1)
 
 class EQL(nn.Module):
-    def __init__(self, in_dim, prod_dim=2, bias=False):
+    def __init__(self, in_dim, prod_dim=2, num_layers=1, bias=False):
         """
         in_dim: number of input features (e.g. u, ux, uxx)
 
         prod_dim: number of linear combinations to create for pairwise products
         """
         super().__init__()
-        self.linear = nn.Linear(in_dim, prod_dim, bias=bias)
-        self.readout = nn.Linear(in_dim + 1, 1, bias=False)
-
+        #
+        #self.linear = nn.Linear(in_dim, prod_dim, bias=bias)
+        self.readout = nn.Linear(in_dim + num_layers, 1, bias=False)
+        self.linears = nn.ModuleList([nn.Linear(in_dim+i, prod_dim) for i in range(num_layers)])
+        
     def forward(self, feats):
-        Z = self.linear(feats)  # (N, prod_dim)
-        self.preop_ns = Z  # save for inspection
-        prod_neuron = torch.prod(Z, dim=1, keepdim=True)  # (N,1)
-        self.postop_ns = prod_neuron  # save for inspection
-        Y_layer = torch.cat([feats, prod_neuron], dim=1)        # (N, in_dim+1)
-        self.Y = Y_layer  # save for inspection
-        return self.readout(Y_layer)
+        for i, linear in enumerate(self.linears):
+            Z = linear(feats)  # (N, prod_dim)
+            self.preop_ns = Z  # save for inspection
+            prod_neuron = torch.prod(Z, dim=1, keepdim=True)  # (N,1)
+            self.postop_ns = prod_neuron  # save for inspection
+            feats = torch.cat([feats, prod_neuron], dim=1)        # (N, in_dim+1)
+            self.feats = feats  # save for inspection
+        return self.readout(feats)
     
     @torch.no_grad()
     def effective_quadratic_matrix(self, symmetrize: bool = False):
