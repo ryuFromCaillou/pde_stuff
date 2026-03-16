@@ -58,7 +58,7 @@ class EQL(nn.Module):
         #
         #self.linear = nn.Linear(in_dim, prod_dim, bias=bias)
         self.readout = nn.Linear(in_dim + num_layers, 1, bias=False)
-        self.linears = nn.ModuleList([nn.Linear(in_dim+i, prod_dim) for i in range(num_layers)])
+        self.linears = nn.ModuleList([nn.Linear(in_dim+i, prod_dim, bias=False) for i in range(num_layers)])
         
     def forward(self, feats):
         for i, linear in enumerate(self.linears):
