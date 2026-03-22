@@ -1,0 +1,21 @@
+{
+  "run_name": "stride_t_1",
+  "sweep_param_name": "stride_t",
+  "sweep_param_value": 1,
+  "best_epoch": 296,
+  "final_epoch": 999,
+  "final_total_loss": 4.902462005615234,
+  "final_tv_loss": 0.0,
+  "final_l1_loss": 3.766411304473877,
+  "final_pde_loss": 0.011848489753901958,
+  "final_data_loss": 0.4896537661552429,
+  "runtime_sec": 12.705816268920898,
+  "snapshot_path": "runs\\hpc_stride_t_sweep\\runs\\stride_t_1\\snapshot.pdf",
+  "status": 1,
+  "w_u": 0.029774360358715057,
+  "w_ux": 0.1763087809085846,
+  "w_uxx": -0.2123529016971588,
+  "w_prod": -0.5047835111618042,
+  "M01": -0.33518049120903015,
+  "M10": -0.005385011900216341
+}

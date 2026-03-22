@@ -4,6 +4,7 @@ from typing import Optional, Callable
 
 import torch.nn as nn
 import torch.optim as optim
+import torch.nn.utils.prune as prune
 from .featlib import FeatureTensorOut, FeatureTensor
 
 # === Trainer ===
@@ -16,6 +17,14 @@ class TrainerConfig:
     lambda_data: float = 1.0
     selected_derivs: tuple[str, ...] = ()
     device: torch.device = torch.device("cpu")
+    beta: float = 0.99
+
+    # --- Optional pruning controls (disabled by default) ---
+    prune_enabled: bool = False
+    prune_amount: float = 0.2
+    prune_coeff_mag_max: Optional[float] = None
+    prune_ema_grad_max: Optional[float] = None
+    prune_ema_drift_max: Optional[float] = None
 
 class PDETrainer:
     """
@@ -54,6 +63,12 @@ class PDETrainer:
         self.optimizer = optim.Adam(params, lr=cfg.lr)
         self.mse = nn.MSELoss()
 
+        # --- Pruning indicators (EMA state) ---
+        self.ema_grad: dict[str, torch.Tensor] = {}
+        self.ema_drift: dict[str, torch.Tensor] = {}
+        self._prev_params: dict[str, torch.Tensor] = {}
+        self._prune_applied: bool = False
+
     def step(self, t, x, u_noisy, u_clean, tv_fn: Optional[Callable] = None):
         t = t.to(self.device).requires_grad_(True)
         x = x.to(self.device).requires_grad_(True)
@@ -90,6 +105,75 @@ class PDETrainer:
 
         self.optimizer.zero_grad()
         loss.backward()
+        
+        #############################
+        ### L1 Pruning Indicators ###
+        #############################
+        beta = float(self.cfg.beta)
+
+        coeff_mag_norm = torch.tensor(0.0, device=self.device)
+        ema_grad_norm = torch.tensor(0.0, device=self.device)
+        ema_drift_norm = torch.tensor(0.0, device=self.device)
+
+        for name, p in self.v.named_parameters():
+            if p.grad is None:
+                continue
+
+            grad_mag = p.grad.detach().abs()
+            coeff_mag = p.detach().abs()
+
+            prev = self._prev_params.get(name)
+            drift_mag = (p.detach() - prev).abs() if prev is not None else torch.zeros_like(coeff_mag)
+
+            if name not in self.ema_grad:
+                self.ema_grad[name] = grad_mag.clone()
+            else:
+                self.ema_grad[name] = beta * self.ema_grad[name] + (1 - beta) * grad_mag
+
+            if name not in self.ema_drift:
+                self.ema_drift[name] = drift_mag.clone()
+            else:
+                self.ema_drift[name] = beta * self.ema_drift[name] + (1 - beta) * drift_mag
+
+            self._prev_params[name] = p.detach().clone()
+
+            coeff_mag_norm = coeff_mag_norm + coeff_mag.pow(2).sum()
+            ema_grad_norm = ema_grad_norm + self.ema_grad[name].pow(2).sum()
+            ema_drift_norm = ema_drift_norm + self.ema_drift[name].pow(2).sum()
+
+        coeff_mag_norm = torch.sqrt(coeff_mag_norm)
+        ema_grad_norm = torch.sqrt(ema_grad_norm)
+        ema_drift_norm = torch.sqrt(ema_drift_norm)
+
+        # Trigger pruning once when indicators are below configured thresholds.
+        prune_ready = self.cfg.prune_enabled and (
+            (self.cfg.prune_coeff_mag_max is None or coeff_mag_norm.item() <= self.cfg.prune_coeff_mag_max)
+            and (self.cfg.prune_ema_grad_max is None or ema_grad_norm.item() <= self.cfg.prune_ema_grad_max)
+            and (self.cfg.prune_ema_drift_max is None or ema_drift_norm.item() <= self.cfg.prune_ema_drift_max)
+        )
+
+        if (not self._prune_applied) and prune_ready:
+            try:
+                # prune all hidden linear layers
+                for layer in self.v.linears:
+                    if isinstance(layer, nn.Linear):
+                        prune.l1_unstructured(
+                            layer,
+                            name="weight",
+                            amount=float(self.cfg.prune_amount),
+                        )
+
+                # prune readout
+                prune.l1_unstructured(
+                    self.v.readout,
+                    name="weight",
+                    amount=float(self.cfg.prune_amount),
+                )
+
+                self._prune_applied = True
+            except Exception:
+                pass
+
         self.optimizer.step()
 
         return {
@@ -98,6 +182,10 @@ class PDETrainer:
             "loss_pde": float(loss_pde.item()),
             "l1": float(l1.item()),
             "loss_tv": float(loss_tv.item()),
+            "coeff_mag": float(coeff_mag_norm.item()),
+            "ema_grad": float(ema_grad_norm.item()),
+            "ema_drift": float(ema_drift_norm.item()),
+            "prune_applied": int(self._prune_applied),
             "feature_names": features.names,
             "feature_scales": features.scales,
         }

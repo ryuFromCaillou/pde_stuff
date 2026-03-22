@@ -72,10 +72,41 @@ class EQL(nn.Module):
     
     @torch.no_grad()
     def effective_quadratic_matrix(self, symmetrize: bool = False):
-        if self.linear.out_features != 2:
-            raise ValueError("Only defined for prod_dim=2 in this EQL form.")
-        A = self.linear.weight          # (2, N)
-        w_p = self.readout.weight[0, -1]  # scalar (product term weight from readout layer)
-        M = w_p * torch.outer(A[0], A[1])  # (N, N)
+        """
+        Return the effective *quadratic* coefficient matrix in the original input-feature
+        basis (i.e., coefficients on x_i x_j where x is the *initial* `feats` passed in).
+
+        Notes
+        -----
+        - For `num_layers > 1`, this model is no longer purely quadratic in the original
+          inputs; it contains higher-order terms (e.g. cubic/quartic/...). This method
+          returns only the degree-2 part with respect to the original inputs.
+        - Defined only for `prod_dim == 2`, where each product neuron is (a·f)(b·f).
+        """
+        if len(self.linears) == 0:
+            raise ValueError("No product layers: effective quadratic matrix is undefined.")
+
+        if any(l.out_features != 2 for l in self.linears):
+            raise ValueError("Only defined for prod_dim=2 in this EQL form (all linears must have out_features==2).")
+
+        K = self.linears[0].in_features  # original feature dimension
+        if self.readout.in_features != K + len(self.linears):
+            raise ValueError(
+                f"readout.in_features should be {K + len(self.linears)} (in_dim + num_layers); "
+                f"got {self.readout.in_features}."
+            )
+
+        w = self.readout.weight[0]  # (K + num_layers,)
+        M = torch.zeros((K, K), device=w.device, dtype=w.dtype)
+
+        # Each appended product neuron p_k contributes: w_prod_k * (a_k·x)(b_k·x) to the quadratic part,
+        # where (a_k, b_k) are the first K entries of the corresponding linear layer rows.
+        for k, linear in enumerate(self.linears):
+            A = linear.weight  # (2, K + k)
+            a0 = A[0, :K]
+            a1 = A[1, :K]
+            w_prod_k = w[K + k]
+            M = M + w_prod_k * torch.outer(a0, a1)
+
         return 0.5 * (M + M.T) if symmetrize else M
 
