@@ -1,5 +1,5 @@
 import numpy as np
-from .burg_gen import BurgersConfig, solve_burgers
+from .data.processed.burg_gen.burg_gen import BurgersConfig, solve_burgers
 from collections import OrderedDict
 
 def build_dataset_from_burgers(
