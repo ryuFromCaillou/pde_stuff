@@ -17,6 +17,20 @@ import Datasets.matconv as mc
 
 
 def train_fn(cfg: dict, run_dir: Path):
+    '''
+    A typical training loop consists of: 
+    1) Create Dataset
+    2) Define inputs to symnet (primitive features up to nth order)
+    3) initialize dual mlps
+    4) 
+    Return a dict with (recommended) keys:
+        - `history`: `list[dict]` (rows are typically per-epoch metrics; each dict becomes one CSV row).
+        - `best_epoch`: `int | None`
+        - `snapshot_path`: `str | Path | None` (optional artifact pointer)
+        - `status`: `1` for success, `0` for failure
+        - `summary_extra`: `dict` (optional; merged into `summary.json`, useful for extra scalars)
+
+    '''
     device = torch.device(cfg.get("device", "cpu"))
 
     partitions = mc.build_dataset_from_burgers(
