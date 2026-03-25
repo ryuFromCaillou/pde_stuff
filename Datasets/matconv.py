@@ -1,5 +1,6 @@
 import numpy as np
-from .data.processed.burg_gen.burg_gen import BurgersConfig, solve_burgers
+from .data.processed.burg_gen.burg_gen import BurgersDatasetConfig, solve_burgers
+from .data.processed.allenc_gen.allen_cahn_gen import AllenCahnConfig, solve_allen_cahn, build_dataset_from_allen
 from collections import OrderedDict
 
 def build_dataset_from_burgers(
@@ -16,8 +17,20 @@ def build_dataset_from_burgers(
     If return_partitions=False (default): returns (t_s, x_s, y_s, y_noisy, N) for the selected times (or all).
     If return_partitions=True: returns an OrderedDict[name] -> (t_s, x_s, y_s, y_noisy, N)
     """
-    cfg = BurgersConfig(N=N, L=L, nu=nu, dt=dt, T=T, seed=seed)
-    x, u_final, t_end, (history_t, history_u) = solve_burgers(cfg, return_history=True)
+    cfg = BurgersDatasetConfig(
+        N=N,
+        L=L,
+        nu=nu,
+        dt=dt,
+        T=T,
+        seed=seed,
+        noise_level=noise_level,
+        stride_t=stride_t,
+        stride_x=stride_x,
+    )
+    x, u_final, t_end, (history_t, history_u) = solve_burgers(
+        N=cfg.N, L=cfg.L, nu=cfg.nu, dt=cfg.dt, T=cfg.T, seed=cfg.seed, return_history=True
+    )
     np.random.seed(cfg.seed)  # for reproducibility of noise
 
     T_snap, X_pts = history_u.shape

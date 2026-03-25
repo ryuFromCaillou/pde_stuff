@@ -16,7 +16,7 @@ def _fmt_value_for_path(v):
     return s
 
 
-def run_sweep(base_config, sweep_param, sweep_values, sweep_root, train_fn, *, overwrite: bool = False):
+def run_sweep(base_config, sweep_param, sweep_values, sweep_root, train_fn, data_fn, overwrite: bool = False):
     """
     Executes multiple runs across sweep values.
     """
@@ -58,7 +58,8 @@ def run_sweep(base_config, sweep_param, sweep_values, sweep_root, train_fn, *, o
             except Exception:
                 pass
 
-        summary = train_one(cfg, run_dir, train_fn)
+        train_fxn = lambda run_dir,cfg: train_fn(run_dir, cfg, data_fn)
+        summary = train_one(cfg, run_dir, train_fxn)
         summaries.append(summary)
 
     df = pd.DataFrame(summaries)

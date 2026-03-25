@@ -58,7 +58,7 @@ def train_one(config, run_dir, train_fn):
     start = time.time()
 
     try:
-        result = train_fn(config, run_dir)
+        result = train_fn(run_dir, config)
     except Exception as e:
         runtime = time.time() - start
         tb = traceback.format_exc()

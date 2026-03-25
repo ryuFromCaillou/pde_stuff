@@ -1,10 +1,10 @@
 {
   "base_config": {
-    "seed": 1432,
+    "seed": 31353,
     "device": "cpu",
     "steps": 1000,
     "log_every": 100,
-    "batch_size": 1000,
+    "batch_size": 100,
     "lr": 0.001,
     "noise": 0.7,
     "nu": 0.02,
@@ -24,7 +24,7 @@
     "u_n_layers": 4,
     "u_hidden": 64
   },
-  "sweep_param": "stride_t",
+  "sweep_param": "stride_x",
   "values": [
     1,
     5

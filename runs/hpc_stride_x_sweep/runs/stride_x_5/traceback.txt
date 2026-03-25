@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "C:\Users\sami\Documents\PDENets\hpc_api\train_one.py", line 61, in train_one
+    result = train_fn(config, run_dir)
+TypeError: 'module' object is not callable

@@ -1,0 +1,15 @@
+{
+  "run_name": "stride_x_3",
+  "sweep_param_name": "stride_x",
+  "sweep_param_value": 3,
+  "best_epoch": null,
+  "final_epoch": null,
+  "final_total_loss": NaN,
+  "final_tv_loss": NaN,
+  "final_l1_loss": NaN,
+  "final_pde_loss": NaN,
+  "final_data_loss": NaN,
+  "runtime_sec": 3.814697265625e-05,
+  "snapshot_path": null,
+  "status": 0
+}

@@ -1,0 +1,3 @@
+run_name,sweep_param_name,sweep_param_value,best_epoch,final_epoch,final_total_loss,final_tv_loss,final_l1_loss,final_pde_loss,final_data_loss,runtime_sec,snapshot_path,status
+stride_x_3,stride_x,3,,,,,,,,3.814697265625e-05,,0
+stride_x_4,stride_x,4,,,,,,,,2.5510787963867188e-05,,0
