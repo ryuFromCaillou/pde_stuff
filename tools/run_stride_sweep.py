@@ -24,7 +24,8 @@ def build_fn(cfg):
     return partitions[key]
 
 
-def hpc_train_fn(cfg: dict, run_dir: Path):
+def hpc_train_fn(run_dir: Path, cfg: dict):
+    # `hpc_api.train_one(...)` calls `train_fn(run_dir, config)`
     return train_fn(run_dir=run_dir, cfg=cfg, build_fn=build_fn)
 
 
@@ -32,7 +33,7 @@ if __name__ == "__main__":
     base_config = dict(
         seed=1432,
         device="cpu",
-        steps=1000,
+        steps=200,
         log_every=100,
         batch_size=1000,
         lr=1e-3,
@@ -51,7 +52,7 @@ if __name__ == "__main__":
         u_hidden=64,
     )
 
-    sweep_root = Path("runs/hpc_stride_t_sweep")
+    sweep_root = Path("runs/agent_stride_t_sweep")
     run_sweep(
         base_config=base_config,
         sweep_param="stride_t",

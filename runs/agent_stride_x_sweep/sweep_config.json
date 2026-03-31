@@ -1,0 +1,32 @@
+{
+  "base_config": {
+    "seed": 1432,
+    "device": "cpu",
+    "steps": 200,
+    "log_every": 100,
+    "batch_size": 1000,
+    "lr": 0.001,
+    "noise": 0.7,
+    "nu": 0.02,
+    "stride_x": 5,
+    "stride_t": 1,
+    "lam_pde": 0.5,
+    "lam_data": 10.0,
+    "lam_reg": 0.0,
+    "lam_tv": 0.0,
+    "selected_derivs": [
+      "u",
+      "u_x",
+      "u_xx"
+    ],
+    "part_num": 1,
+    "which_part": 1,
+    "u_n_layers": 4,
+    "u_hidden": 64
+  },
+  "sweep_param": "stride_x",
+  "values": [
+    3,
+    4
+  ]
+}

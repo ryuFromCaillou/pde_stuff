@@ -10,7 +10,7 @@ Runs a single training job and writes run artifacts into `run_dir/`.
 **Inputs**
 - `config` (`dict`): your training configuration.
 - `run_dir` (`Path | str`): output directory for this run.
-- `train_fn` (`callable`): your training function; signature: `train_fn(config: dict, run_dir: Path) -> dict`.
+- `train_fn` (`callable`): your training function; signature: `train_fn(run_dir: Path, config: dict) -> dict`.
 
 **`train_fn` return contract**
 Return a dict with (recommended) keys:

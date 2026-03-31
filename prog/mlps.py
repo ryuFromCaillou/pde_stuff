@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import math
 
 class Sin(nn.Module):
     def forward(self, input):
@@ -27,6 +28,108 @@ class SimpleMLP(nn.Module):
 
     def forward(self, t, x):
         input_tensor = torch.cat((t, x), dim=1)  # Concatenate along feature axis
+        return self.model(input_tensor)
+
+
+class SineLayer(nn.Module):
+    """
+    'how do i "credit" code'
+    SIREN sine layer: y = sin(omega_0 * (Wx + b))
+
+    Uses SIREN-style weight initialization:
+      - first layer: U(-1/in_features, 1/in_features)
+      - hidden layers: U(-sqrt(6/in_features)/omega_0, sqrt(6/in_features)/omega_0)
+    """
+
+    def __init__(
+        self,
+        in_features: int,
+        out_features: int,
+        *,
+        bias: bool = True,
+        is_first: bool = False,
+        omega_0: float = 30.0,
+    ):
+        super().__init__()
+        self.in_features = int(in_features)
+        self.is_first = bool(is_first)
+        self.omega_0 = float(omega_0)
+        self.linear = nn.Linear(self.in_features, int(out_features), bias=bias)
+        self._init_weights()
+
+    def _init_weights(self) -> None:
+        with torch.no_grad():
+            if self.is_first:
+                bound = 1.0 / float(self.in_features)
+            else:
+                bound = math.sqrt(6.0 / float(self.in_features)) / float(self.omega_0)
+            nn.init.uniform_(self.linear.weight, -bound, bound)
+            if self.linear.bias is not None:
+                nn.init.uniform_(self.linear.bias, -bound, bound)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return torch.sin(self.omega_0 * self.linear(x))
+
+
+class SirenMLP(nn.Module):
+    """
+    Pure function approximator for u(t,x) using SIREN sine activations.
+
+    Contract:
+        model(t, x) -> u_pred
+    where t and x are shaped (N, 1).
+    """
+
+    def __init__(
+        self,
+        *,
+        hidden_size: int = 64,
+        hidden_layers: int = 3,
+        first_omega_0: float = 30.0,
+        hidden_omega_0: float = 30.0,
+        bias: bool = True,
+    ):
+        super().__init__()
+
+        hidden_size = int(hidden_size)
+        hidden_layers = int(hidden_layers)
+        if hidden_layers < 1:
+            raise ValueError("hidden_layers must be >= 1")
+
+        layers = []
+        layers.append(
+            SineLayer(
+                2,
+                hidden_size,
+                bias=bias,
+                is_first=True,
+                omega_0=float(first_omega_0),
+            )
+        )
+
+        for _ in range(hidden_layers - 1):
+            layers.append(
+                SineLayer(
+                    hidden_size,
+                    hidden_size,
+                    bias=bias,
+                    is_first=False,
+                    omega_0=float(hidden_omega_0),
+                )
+            )
+
+        final_linear = nn.Linear(hidden_size, 1, bias=bias)
+        with torch.no_grad():
+            bound = math.sqrt(6.0 / float(hidden_size)) / float(hidden_omega_0)
+            nn.init.uniform_(final_linear.weight, -bound, bound)
+            if final_linear.bias is not None:
+                nn.init.uniform_(final_linear.bias, -bound, bound)
+        layers.append(final_linear)
+
+        self.model = nn.Sequential(*layers)
+
+    def forward(self, t: torch.Tensor, x: torch.Tensor) -> torch.Tensor:
+        input_tensor = torch.cat((t, x), dim=1)
         return self.model(input_tensor)
     
 class symMLP(nn.Module):

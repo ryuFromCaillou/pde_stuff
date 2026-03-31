@@ -1,0 +1,21 @@
+{
+  "run_name": "stride_x_3",
+  "sweep_param_name": "stride_x",
+  "sweep_param_value": 3,
+  "best_epoch": 80,
+  "final_epoch": 199,
+  "final_total_loss": 5.336518287658691,
+  "final_tv_loss": 0.0,
+  "final_l1_loss": 1.22797691822052,
+  "final_pde_loss": 0.012529199942946434,
+  "final_data_loss": 0.5330253839492798,
+  "runtime_sec": 26.384885549545288,
+  "snapshot_path": "runs\\agent_stride_x_sweep\\runs\\stride_x_3\\snapshot.pdf",
+  "status": 1,
+  "w_u": 0.045462436974048615,
+  "w_ux": 0.04383758082985878,
+  "w_uxx": 0.035819415003061295,
+  "w_prod": 0.021133912727236748,
+  "M01": -0.0001261066790902987,
+  "M10": 0.000751896237488836
+}
