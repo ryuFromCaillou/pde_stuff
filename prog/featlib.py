@@ -55,7 +55,7 @@ class FeatureTensor:
     ) -> FeatureTensorOut:
         _ = (t, y)  # explicit ignore (keeps signature stable)
 
-        allowed = {"u", "u_x", "u_xx", "uu_x"}
+        allowed = {"u", "u_x", "u_xx", "uu_x", "u3"}
         requested = [s for s in self.terms if s in allowed]
         ignored = [s for s in self.terms if s not in allowed]
         if ignored:
@@ -98,11 +98,13 @@ class FeatureTensor:
         u_x = self._grad1(u_out, x)
         u_xx = self._grad1(u_x, x)
         uu_x = u_out * u_x
+        u3 = u_out ** 3
 
         self.u_raw = u_out
         self.ux_raw = u_x
         self.uxx_raw = u_xx
         self.uux_raw = uu_x
+        self.u3_raw = u3
             
         # Build primitives
         if "u" in need:
@@ -113,6 +115,8 @@ class FeatureTensor:
             add("u_xx", u_xx, normalize_col=True)
         if "uu_x" in need: 
             add("uu_x", uu_x, normalize_col=True)
+        if "u3" in need:
+            add("u3", u3, normalize_col=True)
         if not feats:
             raise RuntimeError("No features produced. Check 'terms' and provided coords.")
 

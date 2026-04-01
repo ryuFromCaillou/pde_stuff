@@ -1,0 +1,2 @@
+dataset,seed,model,feature_names,coeffs,true_coeffs,abs_coeff_error,l2_coeff_error,residuals,rank,singular_values,final_train_loss
+allen_cahn,0,siren,,,,,,,,,0.00016493559847174238

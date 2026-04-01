@@ -1,79 +1,136 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+import numpy as np
 import torch
-from torch.utils.data import Dataset, Subset
+from torch.utils.data import Dataset
 
 
-class FullPDEDataset(Dataset):
-    def __init__(self, cfg, build_fn):
-        """
-        cfg: config object (attribute access) passed into build_fn.
-        build_fn: function like build_dataset_from_burgers(cfg) returning (t, x, y, y_noisy, N).
-        """
-        t_np, x_np, y_np, y_noisy_np, _ = build_fn(cfg)
+@dataclass
+class AffineNormalizer:
+    a: float
+    b: float
 
-        # keep on CPU; move to device in training loop
-        self.t = torch.from_numpy(t_np).float()
-        self.x = torch.from_numpy(x_np).float()
-        self.y = torch.from_numpy(y_np).float()
-        self.y_noisy = torch.from_numpy(y_noisy_np).float()
+    def to_norm(self, v: np.ndarray) -> np.ndarray:
+        return (np.asarray(v, dtype=np.float64) - self.b) / self.a
 
-    def __len__(self):
-        return self.t.shape[0]
+    def to_phys(self, vn: np.ndarray) -> np.ndarray:
+        return self.a * np.asarray(vn, dtype=np.float64) + self.b
 
-    def __getitem__(self, idx):
-        # return shape (1,) so DataLoader stacks to (B,1)
-        return (
-            self.t[idx : idx + 1],
-            self.x[idx : idx + 1],
-            self.y[idx : idx + 1],
-            self.y_noisy[idx : idx + 1],
-        )
-
-    def full(self):
-        # for full-domain operations (plots, diagnostics)
-        return self.t, self.x, self.y, self.y_noisy
+    @staticmethod
+    def from_array(v: np.ndarray) -> "AffineNormalizer":
+        v = np.asarray(v, dtype=np.float64)
+        vmin = float(np.min(v))
+        vmax = float(np.max(v))
+        if not np.isfinite(vmin) or not np.isfinite(vmax) or vmax == vmin:
+            raise ValueError("Cannot normalize: invalid range")
+        a = 0.5 * (vmax - vmin)
+        b = 0.5 * (vmax + vmin)
+        return AffineNormalizer(a=a, b=b)
 
 
 class PDEDataset(Dataset):
     """
-    PDE dataset that can optionally expose a fixed-size subset view (for faster experiments)
-    while still retaining the full dataset for plotting/diagnostics.
+    Holds a full rectangular PDE rollout and produces a subsampled training set.
 
-    If `cfg.subset_size` is set (int), this dataset's `__len__`/`__getitem__` will operate on
-    `Subset(full_dataset, idx)` where `idx` is sampled once via a seeded `torch.Generator`.
+    Inputs
+    ------
+    t_grid : (Nt,)
+    x_grid : (Nx,)
+    u_grid : (Nt, Nx)
 
-    - Full tensors are accessible via `.full()`.
-    - Subset indices are accessible via `.subset_indices`.
+    Outputs exposed
+    ---------------
+    t_train, x_train, y_train_clean, y_train_noisy
+    t_train_n, x_train_n
+    t_norm, x_norm
     """
 
-    def __init__(self, cfg, build_fn):
-        self.full_dataset = FullPDEDataset(cfg, build_fn)
+    def __init__(
+        self,
+        *,
+        t_grid: np.ndarray,
+        x_grid: np.ndarray,
+        u_grid: np.ndarray,
+        stride_t: int = 1,
+        stride_x: int = 1,
+        noise_level: float = 0.0,
+        seed: int = 0,
+        normalize: bool = True,
+    ) -> None:
+        self.t_grid = np.asarray(t_grid, dtype=np.float64).reshape(-1)
+        self.x_grid = np.asarray(x_grid, dtype=np.float64).reshape(-1)
+        self.u_grid = np.asarray(u_grid, dtype=np.float64)
 
-        subset_size = getattr(cfg, "subset_size", None)
-        subset_seed = int(getattr(cfg, "subset_seed", 0))
+        if self.u_grid.shape != (self.t_grid.size, self.x_grid.size):
+            raise ValueError(
+                f"u_grid shape {self.u_grid.shape} does not match "
+                f"(Nt, Nx)=({self.t_grid.size}, {self.x_grid.size})"
+            )
 
-        self.subset_indices = None
-        self.subset = None
+        self.stride_t = max(1, int(stride_t))
+        self.stride_x = max(1, int(stride_x))
+        self.noise_level = float(noise_level)
+        self.seed = int(seed)
+        self.normalize = bool(normalize)
 
-        if subset_size is not None:
-            subset_size = int(subset_size)
-            if subset_size <= 0:
-                raise ValueError("cfg.subset_size must be a positive int when provided.")
+        rows = np.arange(self.t_grid.size)[::self.stride_t]
+        cols = np.arange(self.x_grid.size)[::self.stride_x]
 
-            m = min(subset_size, len(self.full_dataset))
-            g = torch.Generator().manual_seed(subset_seed)
-            idx = torch.randperm(len(self.full_dataset), generator=g)[:m]
-            self.subset_indices = idx
-            self.subset = Subset(self.full_dataset, idx.tolist())
+        t2d = np.repeat(self.t_grid[:, None], self.x_grid.size, axis=1)
+        x2d = np.repeat(self.x_grid[None, :], self.t_grid.size, axis=0)
 
-    def __len__(self):
-        if self.subset is None:
-            return len(self.full_dataset)
-        return len(self.subset)
+        self.t_train = t2d[np.ix_(rows, cols)].reshape(-1).astype(np.float32)
+        self.x_train = x2d[np.ix_(rows, cols)].reshape(-1).astype(np.float32)
+        self.y_train_clean = self.u_grid[np.ix_(rows, cols)].reshape(-1).astype(np.float32)
 
-    def __getitem__(self, idx):
-        if self.subset is None:
-            return self.full_dataset[idx]
-        return self.subset[idx]
+        if self.noise_level > 0.0:
+            rng = np.random.default_rng(self.seed)
+            sigma = self.noise_level * float(np.std(self.y_train_clean))
+            self.y_train_noisy = (
+                self.y_train_clean + sigma * rng.standard_normal(size=self.y_train_clean.shape)
+            ).astype(np.float32)
+        else:
+            self.y_train_noisy = self.y_train_clean.copy()
 
-    def full(self):
-        return self.full_dataset.full()
+        self.t_norm = AffineNormalizer.from_array(self.t_grid)
+        self.x_norm = AffineNormalizer.from_array(self.x_grid)
+
+        if self.normalize:
+            self.t_train_n = self.t_norm.to_norm(self.t_train).astype(np.float32)
+            self.x_train_n = self.x_norm.to_norm(self.x_train).astype(np.float32)
+        else:
+            self.t_train_n = self.t_train.copy()
+            self.x_train_n = self.x_train.copy()
+
+    def __len__(self) -> int:
+        return int(self.t_train.shape[0])
+
+    def __getitem__(self, idx: int):
+        return (
+            torch.tensor(self.t_train_n[idx], dtype=torch.float32).view(1),
+            torch.tensor(self.x_train_n[idx], dtype=torch.float32).view(1),
+            torch.tensor(self.y_train_noisy[idx], dtype=torch.float32).view(1),
+        )
+
+    @property
+    def ax_scale(self) -> float:
+        return float(self.x_norm.a)
+
+    @property
+    def at_scale(self) -> float:
+        return float(self.t_norm.a)
+
+    def full_grid_normalized_flat(self):
+        Nt, Nx = self.u_grid.shape
+        t2d = np.repeat(self.t_grid[:, None], Nx, axis=1)
+        x2d = np.repeat(self.x_grid[None, :], Nt, axis=0)
+        t_flat_n = self.t_norm.to_norm(t2d.reshape(-1)).astype(np.float32)
+        x_flat_n = self.x_norm.to_norm(x2d.reshape(-1)).astype(np.float32)
+        return t_flat_n, x_flat_n
+
+    def fit_arrays(self):
+        return self.t_train_n, self.x_train_n, self.y_train_noisy
+
+    def fit_arrays_with_clean(self):
+        return self.t_train_n, self.x_train_n, self.y_train_clean, self.y_train_noisy

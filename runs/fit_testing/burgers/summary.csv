@@ -1,0 +1,2 @@
+dataset,seed,model,feature_names,coeffs,true_coeffs,abs_coeff_error,l2_coeff_error,residuals,rank,singular_values,final_train_loss
+burgers,0,siren,,,,,,,,,0.000555177538430259

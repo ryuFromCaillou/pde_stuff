@@ -86,6 +86,9 @@ class RunConfig:
 
 
 def _affine_to_minus1_1(v: np.ndarray):
+    '''
+    Compute a,b such that (v - b) / a maps v to [-1,1].
+    '''
     v = np.asarray(v, dtype=np.float64)
     vmin = float(np.min(v))
     vmax = float(np.max(v))
@@ -121,7 +124,7 @@ def _make_train_samples(
     noise_level: float,
     seed: int,
 ):
-    stride_t = max(1, int(stride_t))
+    stride_t = max(1, int(stride_t)) # subsampling by stride_t means we take every stride_t'th time step; must be >=1
     stride_x = max(1, int(stride_x))
 
     rows = np.arange(t_grid.size)[::stride_t]
@@ -131,17 +134,18 @@ def _make_train_samples(
     x2d = np.repeat(x_grid[None, :], t_grid.size, axis=0)
     u2d = u_grid
 
-    t_s = t2d[np.ix_(rows, cols)].reshape(-1).astype(np.float32)
+    t_s = t2d[np.ix_(rows, cols)].reshape(-1).astype(np.float32) #(reshaping after subsampling ensures correct alignment of t,x,u values; if we reshaped first then subsampled, we’d break the alignment)
     x_s = x2d[np.ix_(rows, cols)].reshape(-1).astype(np.float32)
     y_s = u2d[np.ix_(rows, cols)].reshape(-1).astype(np.float32)
 
     if float(noise_level) > 0:
         rng = np.random.default_rng(int(seed))
-        sigma = float(noise_level) * float(np.std(y_s))
+        sigma = float(noise_level) * float(np.std(y_s)) # scale noise to data stddev so noise_level is a relative measure; if we didn't scale by stddev, then noise_level would be an absolute measure and might need to be adjusted for different datasets or even different train/test splits of the same dataset
         y_noisy = (y_s + sigma * rng.standard_normal(size=y_s.shape)).astype(np.float32)
     else:
         y_noisy = y_s
 
+    # flattened subsampled training data; each of these is 1D with same length
     return t_s, x_s, y_s, y_noisy
 
 
@@ -370,6 +374,7 @@ def run_one_dataset(cfg: RunConfig) -> list[dict[str, Any]]:
     _seed_everything(cfg.seed)
 
     if cfg.dataset == "burgers":
+        
         x, _u_final, _t_end, (t_grid, U_true) = solve_burgers(
             N=int(cfg.burgers_N),
             L=float(cfg.burgers_L),
@@ -387,6 +392,8 @@ def run_one_dataset(cfg: RunConfig) -> list[dict[str, Any]]:
         #t_train below is full t mesh subsampled by stride_t; 
         # x_train is full x mesh subsampled by stride_x; 
         # y_train is corresponding u values with noise
+        # so _make_train_samples provides data to be fitted to, but on a 
+        # coarser mesh than the original t_grid/x_grid that we use for evaluation and plotting
         t_train, x_train, y_train_clean, y_train = _make_train_samples(
             t_grid=t_grid,
             x_grid=x,

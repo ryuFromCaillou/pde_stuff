@@ -1,0 +1,6 @@
+{
+  "dataset": "burgers",
+  "seed": 0,
+  "model": "siren",
+  "final_train_loss": 0.000555177538430259
+}
