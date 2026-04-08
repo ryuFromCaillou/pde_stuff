@@ -16,8 +16,8 @@ import torch
 
 from Datasets.data.processed.allenc_gen.allen_cahn_gen import AllenCahnConfig, solve_allen_cahn
 from Datasets.data.processed.burg_gen.burg_gen import solve_burgers
-from extract_pde_ls import extract_pde_ls
-from fit_utils import fit_model_to_data
+from utils.extract_pde_ls import extract_pde_ls
+from utils.fit_utils import fit_model_to_data
 from prog import hlprs
 from prog.mlps import SimpleMLP, SirenMLP
 
@@ -179,6 +179,7 @@ def run_one_dataset(cfg: RunConfig) -> list[dict[str, Any]]:
     _seed_everything(cfg.seed)
 
     if cfg.dataset == "burgers":
+        #provide data with numerical solution
         x, _u_final, _t_end, (t_grid, U_true) = solve_burgers(
             N=int(cfg.burgers_N),
             L=float(cfg.burgers_L),
@@ -188,10 +189,12 @@ def run_one_dataset(cfg: RunConfig) -> list[dict[str, Any]]:
             seed=int(cfg.seed),
             return_history=True,
         )
+        #preprocess stuff
         x = x.astype(np.float64)
         t_grid = t_grid.astype(np.float64)
         U_true = U_true.astype(np.float64)
 
+        #handles normalizing, adding noise, and striding (sparse sampling)
         t_train, x_train, y_train_clean, y_train = _make_train_samples(
             t_grid=t_grid,
             x_grid=x,
@@ -375,7 +378,7 @@ def main() -> None:
                 allen_reaction_scale=float(args.allen_reaction_scale),
                 allen_bc_value=float(args.allen_bc_value),
             )
-            rows = run_one_dataset(cfg)
+            rows = run_one_dataset(cfg) # out: list of dicts with keys dataset, seed, model, final_train_loss
             all_rows.extend(rows)
             by_dataset[dataset].extend(rows)
 

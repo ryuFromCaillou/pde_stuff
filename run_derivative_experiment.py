@@ -21,12 +21,12 @@ from derivative_utils import (
     fd_third_centered,
     fd_third_periodic,
 )
-from fit_utils import fit_model_to_data, predict_on_grid
+from utils.fit_utils import fit_model_to_data, predict_on_grid
 from prog.hlprs import savefig_atomic
 from prog.mlps import SimpleMLP, SirenMLP
 
 from Datasets.data.processed.allenc_gen.allen_cahn_gen import AllenCahnConfig, solve_allen_cahn
-from Datasets.data.processed.burg_gen.burg_gen import solve_burgers
+from Datasets.data.processed.burg_gen.burg_gen import BurgersDatasetConfig as BurgConfig, solve_burgers
 
 
 SUMMARY_FIELDS = [
@@ -374,16 +374,17 @@ def run_one_dataset(cfg: RunConfig) -> list[dict[str, Any]]:
     _seed_everything(cfg.seed)
 
     if cfg.dataset == "burgers":
-        
-        x, _u_final, _t_end, (t_grid, U_true) = solve_burgers(
+        burg_cfg = BurgConfig(
             N=int(cfg.burgers_N),
             L=float(cfg.burgers_L),
             nu=float(cfg.burgers_nu),
             dt=float(cfg.burgers_dt),
             T=float(cfg.burgers_T),
             seed=int(cfg.seed),
-            return_history=True,
         )
+        
+        x, _u_final, _t_end, (t_grid, U_true) = solve_burgers(burg_cfg)
+
         x = x.astype(np.float64)
         t_grid = t_grid.astype(np.float64)
         U_true = U_true.astype(np.float64)
@@ -519,7 +520,7 @@ def run_one_dataset(cfg: RunConfig) -> list[dict[str, Any]]:
         UXX_pred = derivs["uxx"].reshape(Nt, Nx).astype(np.float64)
         UXXX_pred = derivs["uxxx"].reshape(Nt, Nx).astype(np.float64)
 
-        # Match reference shapes (Allenâ€“Cahn uses interior-only refs)
+        # Match reference shapes (Allen-Cahn uses interior-only refs)
         UX_pred_cmp = UX_pred[trim["ux"]]
         UXX_pred_cmp = UXX_pred[trim["uxx"]]
         UXXX_pred_cmp = UXXX_pred[trim["uxxx"]]
@@ -686,7 +687,7 @@ def main():
     p.add_argument("--burgers_dt", type=float, default=2e-3)
     p.add_argument("--burgers_T", type=float, default=1.0)
 
-    # Allenâ€“Cahn params
+    # Allen-Cahn params
     p.add_argument("--allen_N", type=int, default=201)
     p.add_argument("--allen_dt", type=float, default=0.01)
     p.add_argument("--allen_T", type=float, default=1.0)
@@ -728,6 +729,7 @@ def main():
                 eval_chunk_size=int(args.eval_chunk_size),
             )
             seed_rows = run_one_dataset(cfg)
+            #metadata stuff
             dataset_rows.extend(seed_rows)
             all_rows.extend(seed_rows)
 
@@ -737,7 +739,6 @@ def main():
             _write_csv(ds_out, dataset_rows, SUMMARY_FIELDS)
             print(f"Wrote {ds_out}")
 
-    # Top-level aggregation
     out_path = Path("runs") / "derivative_compare" / "all_results.csv"
     if all_rows:
         _write_csv(out_path, all_rows, SUMMARY_FIELDS)

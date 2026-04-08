@@ -50,7 +50,7 @@ class PDETrainer:
         self.selected_derivs = cfg.selected_derivs
 
         # If caller didn't inject a feature_builder, build a default one.
-        # WARNING: this only supports primitive terms
+        # this only supports primitive terms
         if feature_builder is None:
             self.feature_tens = FeatureTensor(
                 terms=self.selected_derivs,

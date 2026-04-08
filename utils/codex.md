@@ -1,268 +1,221 @@
-Agreed. For Tier 3, normalization is no longer just an implementation detail—it directly affects training dynamics. So it *should* be an axis in the experiment matrix.
+The core question is not “does TV lower loss,” but which TV type and strength produce the most stable derivative field and the best PDE recovery?
 
-Below is a Codex-ready `AGENTS.md` extension that adds normalization as an explicit test dimension for Tier 3.
+Since stack already has sweep utilities, plus a trainer that fits data, the clean experiment is a controlled sweep over TV type and TV lambda while holding everything else fixed. The current sweep utilities are already set up for this style of repeated runs and summary reduction   .
 
----
+## Experiment goal
 
-````markdown
-# Tier 3 Extension: Feature Normalization Ablation
+Determine, for each provided TV regularizer, the lambda regime that best balances:
 
-## Objective
+* data fit
+* PDE fit
+* derivative smoothness
+* coefficient recovery stability
 
-Evaluate the impact of feature normalization in joint PDE training.
+The result should tell you whether TV on (u), TV on (u_x), TV on (u_{xx}), or a spacetime curvature term is the better representative-selector in your surrogate family.
 
-This is a controlled ablation to determine whether `FeatureTensor(normalize=True)` improves:
+## TV candidates
 
-- coefficient recovery
-- training stability
-- derivative consistency
+Assume these four regularizers are available:
 
-compared to `normalize=False`.
+* `tv_u`: penalizes roughness in (u) through (u_x)
+* `tv_ux`: penalizes roughness in (u_x) through (u_{xx})
+* `tv_uxx`: penalizes roughness in (u_{xx}) through (u_{xxx})
+* `laplacian_xt_sq`: penalizes spacetime curvature through ((u_{xx}+u_{tt})^2)
 
-This is now a formal axis in the experiment matrix.
+The fitting loop already computes (u_t) and uses autograd-built features for PDE fitting, so these regularizers are naturally aligned with the current pipeline  .
 
----
+## Main sweep design
 
-# Updated Experiment Matrix
+Use a one-TV-at-a-time sweep first.
 
-For each dataset and model, run:
+For each TV type, sweep over a logarithmic lambda grid:
 
-Dataset:
-- Burgers
-- Allen–Cahn
+[
+\lambda \in {0,\ 10^{-8},\ 10^{-7},\ 10^{-6},\ 10^{-5},\ 10^{-4},\ 10^{-3},\ 10^{-2}}
+]
 
-Field model:
-- SimpleMLP
-- SIREN
+Run each lambda with multiple seeds, ideally 3 to 5.
 
-Feature normalization:
-- normalize = True
-- normalize = False
+So the matrix is:
 
-PDE weight:
-- λ_pde ∈ {0, 1e-3, 1e-2, 1e-1, 1}
+* TV type in `{tv_u, tv_ux, tv_uxx, laplacian_xt_sq}`
+* lambda in `{0, 1e-8, 1e-7, ..., 1e-2}`
+* seed in `{0,1,2}` initially
+
+That gives a clean first-stage experiment.
+
+## Fixed controls
+
+Hold constant:
+
+* dataset type, e.g. Burgers first
+* architecture
+* epochs
+* batch size
+* learning rate
+* noise level
+* stride_t, stride_x
+* feature library
+* `lam_data`
+* `lam_pde`
+
+Burgers and Allen–Cahn generators already give you controlled synthetic data with stride and noise knobs  .
+
+Start with Burgers only. It is the sharper test because derivative instability shows up more clearly there.
+
+## Metrics to record
+
+For each run, log:
+
+* final data loss
+* final TV loss
+* derivative error metrics against a control
+* recovered coefficient errors
+* seed-to-seed variance
+
+Use your existing derivative comparison utilities as the backbone for derivative metrics, since you already have autograd and finite-difference helpers plus error metrics .
+
+### Required metrics
+
+At minimum:
+
+1. `final_data_loss`
+3. `final_tv_loss`
+4. `ux_rel_l2`
+5. `uxx_rel_l2`
+6. `uxxx_rel_l2` if relevant
+9. run status
+
+### Strongly recommended summary metrics
+
+For each lambda, aggregate across seeds:
+
+* mean derivative relative L2
+* std derivative relative L2
+
+This is what will tell you whether a TV term improves identifiability rather than just making one lucky run look better.
+
+## Recommended run structure
+
+Use a separate sweep root per TV type.
+
+Example directory pattern:
+
+* `runs/tv_u_lambda_sweep`
+* `runs/tv_ux_lambda_sweep`
+* `runs/tv_uxx_lambda_sweep`
+* `runs/laplacian_xt_sq_lambda_sweep`
+
+Each sweep should use `sweep_param = "tv_lambda"` and store `tv_type` in the config. sweep tools already support adding sweep metadata into each run config and summary  .
+
+## Training contract
+
+Have the training function return:
+
+* `history`: rows with `epoch`, `data_loss`, `pde_loss`, `tv_loss`, `total_loss`
+* `best_epoch`
+* `status`
+* `summary_extra` with:
+
+  * `tv_type`
+  * `tv_lambda`
+  * `ux_rel_l2`
+  * `uxx_rel_l2`
+  * `uxxx_rel_l2` if used
+
+## Phase 1 experiment spec
+
+Use this as the first task.
+
+### Objective
+
+Evaluate each TV regularizer independently over a log-scale lambda sweep on Burgers data and identify the lambda region that minimizes coefficient recovery error while preserving acceptable data fit.
+
+### Dataset
+
+* Burgers synthetic data
+* fixed noise level
+* fixed stride
+* fixed seed set
+
+### Sweep
+
+For each `tv_type` in:
+
+* `tv_u`
+* `tv_ux`
+* `tv_uxx`
+* `laplacian_xt_sq`
+
+Sweep:
+
+* `tv_lambda ∈ [0, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2]`
 
 Seeds:
-- {0, 1, 2}
 
-Total runs:
-2 (datasets) × 2 (models) × 2 (normalize) × 5 (λ_pde) × 3 (seeds)
+* `0,1,2`
 
----
+### Outputs
 
-# Key Design Constraint
+For each run:
 
-Normalization must only affect the feature library:
+* history CSV
+* summary JSON
+* snapshot figure
+* derivative error summary
 
-```python
-feature_builder = FeatureTensor(
-    terms=feature_terms,
-    normalize=normalize_flag
-).build
-````
+For each sweep:
 
-Do NOT change:
+* sweep results CSV
+* plots of final losses vs lambda
+* plots of derivative error vs lambda
 
-* dataset normalization
-* input scaling
-* training procedure
+## Phase 2 experiment spec
 
-Only change `FeatureTensor(normalize=...)`.
+After phase 1, select the best two TV types and refine lambda locally.
 
----
+For example, if `tv_u` and `tv_ux` look best, do a denser search around their best lambdas, e.g.
 
-# Expected Behavior
+[
+\lambda \in {3e{-6}, 1e{-5}, 3e{-5}, 1e{-4}, 3e{-4}}
+]
 
-## normalize=True
+Then optionally test mixed penalties:
 
-* better conditioning
-* more stable training
-* smoother coefficient trajectories
-* requires coefficient unscaling for physical interpretation
+[
+\lambda_0 \mathrm{TV}*u + \lambda_1 \mathrm{TV}*{u_x}
+]
 
-## normalize=False
+with a small (3 \times 3) grid around the phase-1 best values.
 
-* direct physical coefficients
-* worse conditioning
-* higher variance across seeds
-* potential instability in joint training
+## What codex should implement
 
----
+The clean codex scope is:
 
-# Required Implementation
+1. add TV-aware config fields:
 
-## 1. Add normalize flag to experiment runner
+   * `tv_type`
+   * `tv_lambda`
 
-In `run_pde_extraction_experiment.py` or Tier 3 runner:
+2. add a TV dispatcher:
 
-Add loop:
+   * map `tv_type` string to callable
 
-```python
-for normalize in [True, False]:
-```
+3. update `fit_data_and_pde(...)` call site to pass:
 
-Pass into feature builder:
+   * `tv_terms=[(tv_lambda, selected_tv_fn)]` unless `tv_lambda == 0`
 
-```python
-feature_builder = FeatureTensor(
-    terms=feature_terms,
-    normalize=normalize
-).build
-```
+4. compute derivative metrics after fitting using your derivative utilities 
 
-Inject into trainer:
+6. create one sweep script that accepts:
 
-```python
-trainer = PDETrainer(
-    u_model,
-    v_model,
-    cfg,
-    feature_builder=feature_builder
-)
-```
+   * dataset
+   * tv_type
+   * lambda list
+   * seeds
 
----
+7. emit sweep-level tables and plots via the existing helpers  
 
-## 2. Log normalization setting
+## Minimal codex brief
 
-Each run must record:
-
-```json
-"normalize": true or false
-```
-
-Include in:
-
-* JSON output
-* CSV summary
-
----
-
-## 3. Coefficient handling
-
-### Case A: normalize=False
-
-* coefficients are already physical
-* compare directly to ground truth
-
-### Case B: normalize=True
-
-* must convert:
-
-```python
-w_phys = w_norm / scales
-```
-
-Where:
-
-* `scales` comes from `FeatureTensorOut.scales`
-
-Store BOTH:
-
-* normalized coefficients
-* physical coefficients
-
----
-
-## 4. Logging additions
-
-Each run should include:
-
-* coeff_norm (raw from v_model)
-
-* coeff_phys (after scaling if needed)
-
-* coeff_error_phys
-
-* coeff_error_norm (optional)
-
-* training loss breakdown:
-
-  * loss_data
-  * loss_pde
-  * l1
-
-* coefficient trajectory over epochs
-
----
-
-## 5. Output structure
-
-```text
-runs/tier3/
-    burgers/
-        normalize_true/
-        normalize_false/
-    allen_cahn/
-        normalize_true/
-        normalize_false/
-```
-
-Each subdirectory contains:
-
-* per-seed runs
-* summary.csv
-
----
-
-# Evaluation Criteria
-
-Compare normalize=True vs normalize=False on:
-
-1. coefficient L2 error (physical)
-2. coefficient variance across seeds
-3. final data loss
-4. PDE residual loss
-5. coefficient stability over training
-
----
-
-# Interpretation Targets
-
-You are testing:
-
-Does normalization improve PDE identification during joint training?
-
-Specifically:
-
-* does it stabilize gradients?
-* does it reduce coefficient drift?
-* does it improve recovery accuracy?
-
----
-
-# Constraints
-
-* Do not introduce EQL yet
-
-* Use `symMLP` as PDE head
-
-* Keep feature library fixed per dataset:
-
-  * Burgers: ["u", "u_x", "u_xx", "uu_x"]
-  * Allen–Cahn: ["u", "u_xx", "u3"]
-
-* Keep all other hyperparameters fixed across normalize=True/False runs
-
----
-
-# Validation Checklist
-
-* Both normalize=True and normalize=False runs execute
-* Coefficients are correctly unscaled when needed
-* CSV includes normalize column
-* No crashes from feature scaling differences
-* Results are comparable across seeds
-
----
-
-# Deliverables
-
-1. normalization loop added to experiment runner
-2. correct coefficient scaling logic implemented
-3. results written to structured directories
-4. summary CSV produced with normalization axis included
-
-```
-
-
+Build a sweep experiment for TV regularization. Sweep one TV type at a time over log-scale lambda values `[0, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2]`, with seeds `[0,1,2]`, starting on Burgers data. Add config fields `tv_type` and `tv_lambda`, dispatch the selected TV callable, and pass it into `fit_model_to_data` as `tv_terms=[(tv_lambda, fn)]` when lambda is nonzero. For each run, log history rows containing epoch, total_loss, data_loss, pde_loss, and tv_loss. After training, compute derivative error metrics (`ux_rel_l2`, `uxx_rel_l2`, optional `uxxx_rel_l2`) against a finite-difference control and include them in `summary_extra`. Use the existing `train_one`, `run_sweep`, `reduce_sweep`, and `tabulate_sweep` utilities for run management and summary generation. Create one sweep root per TV type and rank best runs primarily by derivative error not by total loss.
