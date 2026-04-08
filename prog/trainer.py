@@ -15,7 +15,7 @@ class TrainerConfig:
     lambda_tv: float = 1e-4
     lambda_data: float = 1.0
     selected_derivs: tuple[str, ...] = ()
-    device: torch.device = torch.device("cpu")
+    device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class PDETrainer:
     """
