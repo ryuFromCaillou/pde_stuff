@@ -17,7 +17,7 @@ def load_burgers_mat_as_flat(
     x = np.squeeze(data["x"])
     t = np.squeeze(data["t"])
 
-    # Burgers.mat sometimes uses 'u' or 'usol'
+    # Mat files sometimes use 'u' or 'usol'
     if "u" in data:
         u = data["u"]
     elif "usol" in data:
