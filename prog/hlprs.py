@@ -236,3 +236,19 @@ def make_batch(batch_size=1000, t_torch=None, x_torch=None, y_clean=None, y_nois
     u_noisy = y_noisy[idx][:, None].float()
     u_clean = y_clean[idx][:, None].float()
     return t, x, u_noisy, u_clean
+
+# inputs are trainer, data, and correct coeffs(for error calculation).
+# saves a JSON with: 
+def save_to_json(trainer, aux, correct_coeffs, path):
+    import json
+    learned_coeffs = trainer.v.readout.weight.detach().cpu().numpy().flatten().tolist()
+    list_difference = [x - y for x, y in zip(correct_coeffs, learned_coeffs)]
+    coeff_error = np.linalg.norm(list_difference).item()
+    data = aux
+    data['learned_coeffs'] = learned_coeffs
+    data['correct_coeffs'] = correct_coeffs
+    data['coeff_error'] = coeff_error
+    data["feature_scales"] = data["feature_scales"].tolist() if type(data["feature_scales"]) is torch.Tensor else data["feature_scales"]
+    # print(f"key{key} is of type {type(data[key])} and shape {np.shape(data[key])}" for key in data.keys())
+    with open(path, "w") as f:
+        json.dump(data, f, indent=4)

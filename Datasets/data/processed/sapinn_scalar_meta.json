@@ -1,0 +1,7 @@
+{
+    "feature_names": [
+        "u",
+        "u_x",
+        "u_xx"
+    ],
+    "feature_scales": 
