@@ -15,7 +15,9 @@ class TrainerConfig:
     lambda_pde: float = 1e-3
     lambda_reg: float = 1e-3
     lambda_tv: float = 1e-4
-    lambda_data: float = 1.0
+    lambda_data: float = 1.
+    lambda_tv_mask_fn: Optional[Callable[[torch.Tensor], torch.Tensor]] = None
+    lambda_pde_mask_fn: Optional[Callable[[torch.Tensor], torch.Tensor]] = None
     feature_normalize: bool = False
     selected_derivs: tuple[str, ...] = ()
     device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -64,6 +66,7 @@ class SAPINNScalarTrainer:
 
         self.params = list(self.u.parameters()) + list(self.v.parameters())
         self.adam = optim.Adam(self.params, lr=cfg.lr)
+
         self.lbfgs = optim.LBFGS(self.params,
                                 lr=0.1,
                                 max_iter=20,
@@ -73,14 +76,22 @@ class SAPINNScalarTrainer:
         self.lam_tv_optimizer = optim.Adam([self.lambda_tv], lr=cfg.lr_tv, maximize=True)
         self.lam_pde_optimizer = optim.Adam([self.lambda_pde], lr=cfg.lr_pde, maximize=True)
 
-        
+        self.lambda_tv_mask_fn = cfg.lambda_tv_mask_fn
+        self.lambda_pde_mask_fn = cfg.lambda_pde_mask_fn
+
         self.mse = nn.MSELoss()
 
     def mask_tv(self, lam_tv):
-        return 1e-5 * (1 / (1 + torch.exp(-(lam_tv-1))))
+        if self.lambda_tv_mask_fn is not None:
+            return self.lambda_tv_mask_fn(lam_tv)
+        else:
+            return 1e-5 * (1 / (1 + torch.exp(-(lam_tv-1))))
     
     def mask_pde(self, lam_pde):
-        return lam_pde**2
+        if self.lambda_pde_mask_fn is not None:
+            return self.lambda_pde_mask_fn(lam_pde)
+        else:
+            return lam_pde**2
 
     def compute_loss(self, t, x, u_noisy, u_clean, tv_fn: Optional[Callable] = None):
             t = t.to(self.device).requires_grad_(True)

@@ -241,10 +241,18 @@ def make_batch(batch_size=1000, t_torch=None, x_torch=None, y_clean=None, y_nois
 # saves a JSON with: 
 def save_to_json(trainer, aux, correct_coeffs, path):
     import json
+    import inspect
     learned_coeffs = trainer.v.readout.weight.detach().cpu().numpy().flatten().tolist()
     list_difference = [x - y for x, y in zip(correct_coeffs, learned_coeffs)]
     coeff_error = np.linalg.norm(list_difference).item()
+
     data = aux
+
+    try:
+        data["mask_pde_source"] = inspect.getsource(trainer.cfg.lambda_pde_mask_fn)
+        data["mask_tv_source"] = inspect.getsource(trainer.cfg.lambda_tv_mask_fn)
+    except AttributeError:
+        print("couldn't save masking functions. Likely cause is trainer instance being PDETRainer, which doesn't have them as attributes.")
     data['learned_coeffs'] = learned_coeffs
     data['correct_coeffs'] = correct_coeffs
     data['coeff_error'] = coeff_error

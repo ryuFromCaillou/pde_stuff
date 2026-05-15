@@ -58,7 +58,8 @@ def load_burgers_mat_as_flat(
         yy = u[np.ix_(x_rows, t_cols_idx)].reshape(-1)
 
         if noise_level and noise_level > 0:
-            yy_noisy = yy + noise_level * rng.standard_normal(size=yy.shape)
+            sigma = float(noise_level) * float(np.std(yy))
+            yy_noisy = yy + sigma * rng.standard_normal(size=yy.shape)
         else:
             yy_noisy = yy.copy()
 
