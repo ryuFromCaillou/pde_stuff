@@ -1,0 +1,38 @@
+{
+    "loss": 0.0905059352517128,
+    "loss_data": 0.008975601755082607,
+    "loss_pde_raw": 3.216103505110368e-05,
+    "lambda_pde": 1.3247841596603394,
+    "mask_pde": 23.219587326049805,
+    "loss_pde_weighted": 0.0007467659888789058,
+    "l1": 3.5012753009796143,
+    "loss_tv_raw": 0.07831986248493195,
+    "lambda_tv": 0.6022209525108337,
+    "mask_tv": 4.0194605389842764e-05,
+    "loss_tv_weighted": 3.1480360576097155e-06,
+    "feature_names": [
+        "u",
+        "u_x",
+        "u_xx"
+    ],
+    "feature_scales": [
+        1.0,
+        1.0,
+        1.0
+    ],
+    "mask_pde_source": "def pde_mask_1(lam):\n    return 40 * (1 / (1 + torch.exp(-(lam-1))))\n",
+    "mask_tv_source": "def tv_mask_1(lam):\n    return 1e-8 + 1e-4 * (1 / (1 + torch.exp(-(lam-1))))\n",
+    "learned_coeffs": [
+        0.02107143960893154,
+        -0.014267181977629662,
+        0.07973532378673553,
+        -0.6193426251411438
+    ],
+    "correct_coeffs": [
+        0.0,
+        0.0,
+        0.02,
+        -1.0
+    ],
+    "coeff_error": 0.38615528481572997
+}

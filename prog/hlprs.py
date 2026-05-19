@@ -216,18 +216,18 @@ def coeff_err_plot(CE, run_dir, names=None):
     plt.legend(); plt.tight_layout()
     savefig_atomic(run_dir/"coef_errors.pdf")
 
-def general_plot(list_of_lists, ylabel, title, filename, run_dir):
+def general_plot(list_of_lists, name_list, ylabel, title, filename, run_dir):
     plt.figure()
     assert all(len(lst) == len(list_of_lists[0]) for lst in list_of_lists), \
         f"All lists must have the same length, got {[len(lst) for lst in list_of_lists]}"
-    for lst in list_of_lists:
-        plt.plot(torch.arange(0, len(lst)), torch.tensor(lst).view(len(lst), -1).mean(dim=1)[:len(lst)])
+    for lst, name in zip(list_of_lists, name_list):
+        plt.plot(torch.arange(0, len(lst)), torch.tensor(lst).view(len(lst), -1).mean(dim=1)[:len(lst)], label=name)
     plt.yscale('log')
-    plt.xlabel('epoch')
+    plt.xlabel('steps')
     plt.ylabel(ylabel)
     plt.title(title)
     plt.legend(loc='best')
-    savefig_atomic(run_dir/filename)
+    savefig_atomic(f"{run_dir}/{filename}")
 
 def make_batch(batch_size=1000, t_torch=None, x_torch=None, y_clean=None, y_noisy=None):
     idx = torch.randint(0, t_torch.shape[0], (batch_size,), device=device)

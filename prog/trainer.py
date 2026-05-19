@@ -22,7 +22,7 @@ class TrainerConfig:
     selected_derivs: tuple[str, ...] = ()
     device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-
+        
 class SAPINNScalarTrainer:
     """
     Implements the training loop for a simplified SAPINN based on McClenny et al's 
