@@ -12,6 +12,7 @@ import numpy as np
 import torch
 from Datasets.data.processed.allenc_gen.allen_cahn_gen import AllenCahnConfig, solve_allen_cahn
 from Datasets.data.processed.burg_gen.burg_gen import solve_burgers
+from Datasets.data.processed.heat_gen.heat_gen import HeatConfig, solve_heat
 from prog import hlprs
 from prog.hlprs import savefig_atomic
 from prog.mlps import SirenMLP
@@ -301,6 +302,12 @@ class RunConfig:
     allen_d: float
     allen_reaction_scale: float
     allen_bc_value: float
+    heat_N: int
+    heat_L: float
+    heat_dt: float
+    heat_T: float
+    heat_alpha: float
+    heat_ic_modes: int
     tv_type: str
     tv_lambda: float
     eval_chunk_size: int
@@ -378,8 +385,19 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
                 seed=int(cfg.seed),
             )
             x_grid, _u_final, _t_end, (t_grid, u_grid) = solve_allen_cahn(allen_cfg, return_history=True)
+        elif dataset in {"heat", "heat_eq", "heat-equation"}:
+            heat_cfg = HeatConfig(
+                N=int(cfg.heat_N),
+                L=float(cfg.heat_L),
+                dt=float(cfg.heat_dt),
+                T=float(cfg.heat_T),
+                alpha=float(cfg.heat_alpha),
+                seed=int(cfg.seed),
+                ic_modes=int(cfg.heat_ic_modes),
+            )
+            x_grid, _u_final, _t_end, (t_grid, u_grid) = solve_heat(heat_cfg, return_history=True)
         else:
-            raise ValueError("Unknown dataset. Use --dataset burgers or --dataset allen_cahn.")
+            raise ValueError("Unknown dataset. Use --dataset burgers, --dataset allen_cahn, or --dataset heat.")
 
         t_grid = np.asarray(t_grid, dtype=np.float64)
         x_grid = np.asarray(x_grid, dtype=np.float64)
@@ -482,8 +500,10 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
         )
         if dataset in {"burgers", "burger"}:
             ref_derivs = _fd_derivs_burgers(u_grid, x_grid)
-        else:
+        elif dataset in {"allen_cahn", "allen-cahn", "allencahn", "allen"}:
             ref_derivs = _fd_derivs_allen_cahn(u_grid, x_grid)
+        else:
+            ref_derivs = _fd_derivs_burgers(u_grid, x_grid)
 
         # Derivative overlay plots (best-effort)
         try:
@@ -514,11 +534,15 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
             feature_terms = ["u", "u_x", "u_xx", "uu_x"]
             pde = extract_pde_ls(phys_model, t_flat, x_flat, feature_terms, device=str(cfg.device))
             true_coeffs = np.array([0.0, 0.0, float(cfg.burgers_nu), -1.0], dtype=float)
-        else:
+        elif dataset in {"allen_cahn", "allen-cahn", "allencahn", "allen"}:
             feature_terms = ["u", "u_xx", "u3"]
             pde = extract_pde_ls(phys_model, t_flat, x_flat, feature_terms, device=str(cfg.device))
             r = float(cfg.allen_reaction_scale)
             true_coeffs = np.array([r, float(cfg.allen_d), -r], dtype=float)
+        else:
+            feature_terms = ["u_xx"]
+            pde = extract_pde_ls(phys_model, t_flat, x_flat, feature_terms, device=str(cfg.device))
+            true_coeffs = np.array([float(cfg.heat_alpha)], dtype=float)
         coeffs = np.asarray(pde["coeffs"], dtype=float).reshape(-1)
         l2_coeff_error = float(np.linalg.norm(coeffs - true_coeffs))
 
@@ -597,7 +621,7 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
 
 def main() -> None:
     p = argparse.ArgumentParser(description="TV regularization lambda sweep (Burgers / Allen–Cahn)")
-    p.add_argument("--dataset", default="burgers", choices=["burgers", "allen_cahn"])
+    p.add_argument("--dataset", default="burgers", choices=["burgers", "allen_cahn", "heat"])
     p.add_argument("--tv_types", nargs="+", default=list(available_tv_types()))
     p.add_argument("--tv_lambdas", nargs="+", type=float, default=DEFAULT_LAMBDAS)
     p.add_argument("--seeds", nargs="+", type=int, default=[0, 1, 2])
@@ -633,6 +657,14 @@ def main() -> None:
     p.add_argument("--allen_d", type=float, default=0.001)
     p.add_argument("--allen_reaction_scale", type=float, default=5.0)
     p.add_argument("--allen_bc_value", type=float, default=-1.0)
+
+    # Heat params
+    p.add_argument("--heat_N", type=int, default=256)
+    p.add_argument("--heat_L", type=float, default=2 * np.pi)
+    p.add_argument("--heat_dt", type=float, default=2e-3)
+    p.add_argument("--heat_T", type=float, default=1.0)
+    p.add_argument("--heat_alpha", type=float, default=0.01)
+    p.add_argument("--heat_ic_modes", type=int, default=8)
 
     args = p.parse_args()
 
@@ -673,6 +705,12 @@ def main() -> None:
                     allen_d=float(args.allen_d),
                     allen_reaction_scale=float(args.allen_reaction_scale),
                     allen_bc_value=float(args.allen_bc_value),
+                    heat_N=int(args.heat_N),
+                    heat_L=float(args.heat_L),
+                    heat_dt=float(args.heat_dt),
+                    heat_T=float(args.heat_T),
+                    heat_alpha=float(args.heat_alpha),
+                    heat_ic_modes=int(args.heat_ic_modes),
                     tv_type=str(tv_type),
                     tv_lambda=float(tv_lambda),
                     eval_chunk_size=int(args.eval_chunk_size),
