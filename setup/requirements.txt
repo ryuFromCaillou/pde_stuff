@@ -1,0 +1,7 @@
+numpy>=1.23
+matplotlib>=3.7
+pandas>=2.0
+scipy>=1.10
+# Note: torch wheels are platform/CUDA-specific. For CPU-only installs see:
+# https://pytorch.org/get-started/locally/
+torch>=2.1
