@@ -1,0 +1,37 @@
+{
+  "dataset": "allen_cahn",
+  "seed": 2,
+  "model": "siren",
+  "epochs": 300,
+  "batch_size": 1024,
+  "lr": 0.001,
+  "noise_level": 0.05,
+  "stride_t": 1,
+  "stride_x": 1,
+  "tv_type": "tv_u",
+  "tv_lambda": 1e-06,
+  "final_total_loss": 0.001686639614097211,
+  "final_data_loss": 0.0016843737466953972,
+  "final_tv_loss": 2.2658757510454768e-06,
+  "ux_rel_l2": 0.2635818488931093,
+  "uxx_rel_l2": 1.2838428420403367,
+  "uxxx_rel_l2": 4.80252501973372,
+  "l2_coeff_error": 0.3022767992979853,
+  "status": 1,
+  "error": "",
+  "pde_names": [
+    "u",
+    "u_xx",
+    "u3"
+  ],
+  "pde_coeffs": [
+    4.8132925529596555,
+    0.0004293802986582579,
+    -4.762279014374692
+  ],
+  "true_coeffs": [
+    5.0,
+    0.001,
+    -5.0
+  ]
+}
