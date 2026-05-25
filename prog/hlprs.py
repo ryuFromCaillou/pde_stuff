@@ -229,7 +229,13 @@ def general_plot(list_of_lists, ylabel, title, filename, run_dir):
     plt.legend(loc='best')
     savefig_atomic(run_dir/filename)
 
-def make_batch(batch_size=1000, t_torch=None, x_torch=None, y_clean=None, y_noisy=None):
+def make_batch(
+    batch_size: int=1000, 
+    t_torch: torch.Tensor =None, 
+    x_torch: torch.Tensor=None, 
+    y_clean: torch.Tensor=None, 
+    y_noisy: torch.Tensor=None
+    ):
     idx = torch.randint(0, t_torch.shape[0], (batch_size,), device=device)
     t = t_torch[idx][:, None].float().requires_grad_(True)
     x = x_torch[idx][:, None].float().requires_grad_(True)

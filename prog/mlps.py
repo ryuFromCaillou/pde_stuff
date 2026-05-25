@@ -2,43 +2,12 @@ import torch
 import torch.nn as nn
 import math
 
-class Sin(nn.Module):
-    def forward(self, input):
-        return torch.sin(input)
-
-class SimpleMLP(nn.Module):
-    def __init__(self, n_layers, hidden_size, act=Sin):
-        super(SimpleMLP, self).__init__()
-        assert n_layers >= 2, "n_layers must be at least 2"
-
-        layers = []
-        # First layer: input (2,) -> hidden_size
-        layers.append(nn.Linear(2, hidden_size))
-        layers.append(act())
-
-        # Hidden layers: (m -> m)
-        for _ in range(n_layers - 2):
-            layers.append(nn.Linear(hidden_size, hidden_size))
-            layers.append(act())
-
-        # Final layer: (m -> 1)
-        layers.append(nn.Linear(hidden_size, 1))
-
-        self.model = nn.Sequential(*layers)
-
-    def forward(self, t, x):
-        input_tensor = torch.cat((t, x), dim=1)  # Concatenate along feature axis
-        return self.model(input_tensor)
-
 
 class SineLayer(nn.Module):
     """
-    'how do i "credit" code'
     SIREN sine layer: y = sin(omega_0 * (Wx + b))
-
-    Uses SIREN-style weight initialization:
-      - first layer: U(-1/in_features, 1/in_features)
-      - hidden layers: U(-sqrt(6/in_features)/omega_0, sqrt(6/in_features)/omega_0)
+    
+    Hyperparams: omega_0
     """
 
     def __init__(
@@ -58,6 +27,7 @@ class SineLayer(nn.Module):
         self._init_weights()
 
     def _init_weights(self) -> None:
+        # paper describes how to initialize
         with torch.no_grad():
             if self.is_first:
                 bound = 1.0 / float(self.in_features)
@@ -73,11 +43,8 @@ class SineLayer(nn.Module):
 
 class SirenMLP(nn.Module):
     """
-    Pure function approximator for u(t,x) using SIREN sine activations.
-
-    Contract:
-        model(t, x) -> u_pred
-    where t and x are shaped (N, 1).
+    Pure function approximator for u(t,x) using SIREN sine activation
+    Hyperparams: first_omega_0 ('frequency' regularizing for first layer), hidden_omega_0 ('frequency' regularizing for n-hidden layers)
     """
 
     def __init__(
@@ -131,31 +98,14 @@ class SirenMLP(nn.Module):
     def forward(self, t: torch.Tensor, x: torch.Tensor) -> torch.Tensor:
         input_tensor = torch.cat((t, x), dim=1)
         return self.model(input_tensor)
-    
-class symMLP(nn.Module):
-    """
-    Readout-only baseline, EQL-swappable contract.
 
-    v(F) = readout([F])
-
-    - Keeps readout shape (K -> 1), bias=False
-    - Simple linear transformation of features acted on by optimizer (GD, Lasso, etc.)
-
-    """
-    def __init__(self, in_dim: int, prod_dim: int = 2, bias: bool = False):
-        super().__init__()
-        self.readout = nn.Linear(in_dim, 1, bias=False)
-
-    def forward(self, feats: torch.Tensor) -> torch.Tensor:
-        Y = torch.cat([feats], dim=1)  # (N, K+1)
-        return self.readout(Y)              # (N, 1)
 
 class EQL(nn.Module):
     def __init__(self, in_dim, prod_dim=2, num_layers=1, bias=False):
         """
         in_dim: number of input features (e.g. u, ux, uxx)
 
-        prod_dim: number of linear combinations to create for pairwise products
+        prod_dim: number of linear combinations to create for inputsize-wise products (e.g. prod_dim=3 -> (sum f_i)(sum f_j)(sum f_k))
         """
         super().__init__()
         #

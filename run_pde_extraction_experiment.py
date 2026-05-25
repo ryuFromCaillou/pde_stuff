@@ -17,7 +17,7 @@ import torch
 from Datasets.data.processed.allenc_gen.allen_cahn_gen import AllenCahnConfig, solve_allen_cahn
 from Datasets.data.processed.burg_gen.burg_gen import solve_burgers
 from extract_pde_ls import extract_pde_ls
-from fit_utils import fit_model_to_data
+from utils.fit_utils import fit_model_to_data
 from prog import hlprs
 from prog.mlps import SimpleMLP, SirenMLP
 

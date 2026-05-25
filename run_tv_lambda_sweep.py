@@ -1,24 +1,20 @@
 from __future__ import annotations
-
 import argparse
 import csv
 import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
-
 import matplotlib
-
 matplotlib.use("Agg")
-
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-
+from Datasets.data.processed.allenc_gen.allen_cahn_gen import AllenCahnConfig, solve_allen_cahn
 from Datasets.data.processed.burg_gen.burg_gen import solve_burgers
 from prog import hlprs
 from prog.hlprs import savefig_atomic
-from prog.mlps import SirenMLP, SimpleMLP
+from prog.mlps import SirenMLP
 from utils.derivative_utils import (
     autograd_spatial_derivatives,
     compute_error_metrics,
@@ -190,6 +186,21 @@ def _fd_derivs_burgers(u_grid: np.ndarray, x_grid: np.ndarray) -> dict[str, np.n
     return {"u": U, "ux": Ux, "uxx": Uxx, "uxxx": Uxxx}
 
 
+def _fd_derivs_allen_cahn(u_grid: np.ndarray, x_grid: np.ndarray) -> dict[str, np.ndarray]:
+    """
+    Allen–Cahn uses Dirichlet boundaries, so prefer non-periodic stencils.
+    Use numpy's edge-aware gradients to return full-grid arrays.
+    """
+    U = np.asarray(u_grid, dtype=np.float64)
+    x = np.asarray(x_grid, dtype=np.float64).reshape(-1)
+    dx = float(x[1] - x[0])
+
+    Ux = np.gradient(U, dx, axis=1, edge_order=2)
+    Uxx = np.gradient(Ux, dx, axis=1, edge_order=2)
+    Uxxx = np.gradient(Uxx, dx, axis=1, edge_order=2)
+    return {"u": U, "ux": np.asarray(Ux), "uxx": np.asarray(Uxx), "uxxx": np.asarray(Uxxx)}
+
+
 def _plot_vs_lambda(
     *,
     run_dir: Path,
@@ -282,6 +293,14 @@ class RunConfig:
     burgers_nu: float
     burgers_dt: float
     burgers_T: float
+    allen_N: int
+    allen_x_min: float
+    allen_x_max: float
+    allen_dt: float
+    allen_T: float
+    allen_d: float
+    allen_reaction_scale: float
+    allen_bc_value: float
     tv_type: str
     tv_lambda: float
     eval_chunk_size: int
@@ -320,9 +339,7 @@ def _make_model(cfg: RunConfig) -> torch.nn.Module:
             first_omega_0=float(cfg.first_omega_0),
             hidden_omega_0=float(cfg.hidden_omega_0),
         )
-    if m == "mlp":
-        return SimpleMLP(n_layers=int(cfg.hidden_layers), hidden_size=int(cfg.hidden_size))
-    raise ValueError(f"Unknown model='{cfg.model}' (expected 'siren' or 'mlp').")
+    raise ValueError(f"Unknown model='{cfg.model}' (expected 'siren').")
 
 
 def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
@@ -333,27 +350,44 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
     try:
         _seed_everything(int(cfg.seed))
 
-        if str(cfg.dataset).lower() != "burgers":
-            raise ValueError("This sweep runner currently supports dataset='burgers' only.")
-
-        # dataset
-        x_grid, _u_final, _t_end, (t_grid, u_grid) = solve_burgers(
-            N=int(cfg.burgers_N),
-            L=float(cfg.burgers_L),
-            nu=float(cfg.burgers_nu),
-            dt=float(cfg.burgers_dt),
-            T=float(cfg.burgers_T),
-            seed=int(cfg.seed),
-            return_history=True,
-        )
+        dataset = str(cfg.dataset).lower().strip()
+        if dataset in {"burgers", "burger"}:
+            # dataset
+            x_grid, _u_final, _t_end, (t_grid, u_grid) = solve_burgers(
+                N=int(cfg.burgers_N),
+                L=float(cfg.burgers_L),
+                nu=float(cfg.burgers_nu),
+                dt=float(cfg.burgers_dt),
+                T=float(cfg.burgers_T),
+                seed=int(cfg.seed),
+                return_history=True,
+            )
+        elif dataset in {"allen_cahn", "allen-cahn", "allencahn", "allen"}:
+            allen_cfg = AllenCahnConfig(
+                N=int(cfg.allen_N),
+                x_min=float(cfg.allen_x_min),
+                x_max=float(cfg.allen_x_max),
+                dt=float(cfg.allen_dt),
+                T=float(cfg.allen_T),
+                d=float(cfg.allen_d),
+                reaction_scale=float(cfg.allen_reaction_scale),
+                bc_value=float(cfg.allen_bc_value),
+                stride_t=1,
+                stride_x=1,
+                noise_level=0.0,
+                seed=int(cfg.seed),
+            )
+            x_grid, _u_final, _t_end, (t_grid, u_grid) = solve_allen_cahn(allen_cfg, return_history=True)
+        else:
+            raise ValueError("Unknown dataset. Use --dataset burgers or --dataset allen_cahn.")
 
         t_grid = np.asarray(t_grid, dtype=np.float64)
         x_grid = np.asarray(x_grid, dtype=np.float64)
         u_grid = np.asarray(u_grid, dtype=np.float64)
         if not np.isfinite(u_grid).all():
             raise ValueError(
-                "Burgers solver returned non-finite values (nan/inf). "
-                "Try adjusting --burgers_dt / --burgers_nu / --burgers_N."
+                f"{dataset} solver returned non-finite values (nan/inf). "
+                "Try adjusting your solver parameters."
             )
 
         # Training samples (physical coords)
@@ -414,6 +448,7 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
         else:
             for i, l in enumerate(hist.losses):
                 history_rows.append({"epoch": int(i), "total_loss": float(l), "data_loss": float("nan"), "pde_loss": 0.0, "tv_loss": float("nan")})
+        
         _write_csv(run_dir / "history.csv", history_rows, ["epoch", "total_loss", "data_loss", "pde_loss", "tv_loss"])
 
         # Wrap for physical evaluation + physical-unit derivatives
@@ -445,7 +480,10 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
             chunk_size=int(cfg.eval_chunk_size),
             max_order=3,
         )
-        ref_derivs = _fd_derivs_burgers(u_grid, x_grid)
+        if dataset in {"burgers", "burger"}:
+            ref_derivs = _fd_derivs_burgers(u_grid, x_grid)
+        else:
+            ref_derivs = _fd_derivs_allen_cahn(u_grid, x_grid)
 
         # Derivative overlay plots (best-effort)
         try:
@@ -472,10 +510,15 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
         x2d = np.repeat(x_grid[None, :], Nt, axis=0)
         t_flat = t2d.reshape(-1)
         x_flat = x2d.reshape(-1)
-        feature_terms = ["u", "u_x", "u_xx", "uu_x"]
-        pde = extract_pde_ls(phys_model, t_flat, x_flat, feature_terms, device=str(cfg.device))
-
-        true_coeffs = np.array([0.0, 0.0, float(cfg.burgers_nu), -1.0], dtype=float)
+        if dataset in {"burgers", "burger"}:
+            feature_terms = ["u", "u_x", "u_xx", "uu_x"]
+            pde = extract_pde_ls(phys_model, t_flat, x_flat, feature_terms, device=str(cfg.device))
+            true_coeffs = np.array([0.0, 0.0, float(cfg.burgers_nu), -1.0], dtype=float)
+        else:
+            feature_terms = ["u", "u_xx", "u3"]
+            pde = extract_pde_ls(phys_model, t_flat, x_flat, feature_terms, device=str(cfg.device))
+            r = float(cfg.allen_reaction_scale)
+            true_coeffs = np.array([r, float(cfg.allen_d), -r], dtype=float)
         coeffs = np.asarray(pde["coeffs"], dtype=float).reshape(-1)
         l2_coeff_error = float(np.linalg.norm(coeffs - true_coeffs))
 
@@ -553,8 +596,8 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
 
 
 def main() -> None:
-    p = argparse.ArgumentParser(description="TV regularization lambda sweep (Burgers)")
-    p.add_argument("--dataset", default="burgers")
+    p = argparse.ArgumentParser(description="TV regularization lambda sweep (Burgers / Allen–Cahn)")
+    p.add_argument("--dataset", default="burgers", choices=["burgers", "allen_cahn"])
     p.add_argument("--tv_types", nargs="+", default=list(available_tv_types()))
     p.add_argument("--tv_lambdas", nargs="+", type=float, default=DEFAULT_LAMBDAS)
     p.add_argument("--seeds", nargs="+", type=int, default=[0, 1, 2])
@@ -581,13 +624,23 @@ def main() -> None:
     p.add_argument("--burgers_dt", type=float, default=2e-3)
     p.add_argument("--burgers_T", type=float, default=1.0)
 
+    # Allen–Cahn params
+    p.add_argument("--allen_N", type=int, default=201)
+    p.add_argument("--allen_x_min", type=float, default=-1.0)
+    p.add_argument("--allen_x_max", type=float, default=1.0)
+    p.add_argument("--allen_dt", type=float, default=0.01)
+    p.add_argument("--allen_T", type=float, default=1.0)
+    p.add_argument("--allen_d", type=float, default=0.001)
+    p.add_argument("--allen_reaction_scale", type=float, default=5.0)
+    p.add_argument("--allen_bc_value", type=float, default=-1.0)
+
     args = p.parse_args()
 
     all_rows: list[dict[str, Any]] = []
 
     for tv_type in args.tv_types:
         tv_type = str(tv_type)
-        root = Path("runs") / f"{tv_type}_lambda_sweep"
+        root = Path("runs") / "tv_lambda_sweep" / str(args.dataset) / str(tv_type)
         root.mkdir(parents=True, exist_ok=True)
 
         for tv_lambda in args.tv_lambdas:
@@ -612,6 +665,14 @@ def main() -> None:
                     burgers_nu=float(args.burgers_nu),
                     burgers_dt=float(args.burgers_dt),
                     burgers_T=float(args.burgers_T),
+                    allen_N=int(args.allen_N),
+                    allen_x_min=float(args.allen_x_min),
+                    allen_x_max=float(args.allen_x_max),
+                    allen_dt=float(args.allen_dt),
+                    allen_T=float(args.allen_T),
+                    allen_d=float(args.allen_d),
+                    allen_reaction_scale=float(args.allen_reaction_scale),
+                    allen_bc_value=float(args.allen_bc_value),
                     tv_type=str(tv_type),
                     tv_lambda=float(tv_lambda),
                     eval_chunk_size=int(args.eval_chunk_size),
@@ -667,7 +728,7 @@ def main() -> None:
 
     # Global summary
     if (not args.dry_run) and all_rows:
-        out_path = Path("runs") / "tv_lambda_sweep_all_results.csv"
+        out_path = Path("runs") / "tv_lambda_sweep" / str(args.dataset) / "all_results.csv"
         _write_csv(out_path, all_rows, SUMMARY_FIELDS)
         print(f"\nWrote {out_path}")
 
