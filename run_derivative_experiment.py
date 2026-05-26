@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
-from derivative_utils import (
+from utils.derivative_utils import (
     compute_error_metrics,
     fd_first_centered,
     fd_first_periodic,

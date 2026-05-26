@@ -16,6 +16,8 @@ class FitHistoryRow:
     data_loss: float
     pde_loss: float
     tv_loss: float
+    l1_data_loss: float = 0.0
+    l1_pde_loss: float = 0.0
 
 
 @dataclass
@@ -140,6 +142,8 @@ def fit_model_to_data(
                 data_loss=float(epoch_data),
                 pde_loss=0.0,
                 tv_loss=float(epoch_tv),
+                l1_data_loss=0.0,
+                l1_pde_loss=0.0,
             )
         )
 
@@ -167,6 +171,8 @@ def fit_data_and_pde(
     weight_decay: float = 0.0,
     lam_pde: float = 1.0,
     lam_data: float = 1.0,
+    lam_l1_data: float = 0.0,
+    lam_l1_pde: float = 0.0,
     log_every: int = 100,
     params: list[torch.nn.Parameter] | None = None,
     tv_terms: list[tuple[float, callable]] | None = None
@@ -201,6 +207,7 @@ def fit_data_and_pde(
 
     opt = torch.optim.Adam(params, lr=float(lr), weight_decay=float(weight_decay))
     loss_fn = torch.nn.MSELoss()
+    l1_fn = torch.nn.L1Loss()
 
     losses: list[float] = []
     rows: list[FitHistoryRow] = []
@@ -210,6 +217,8 @@ def fit_data_and_pde(
         epoch_data = 0.0
         epoch_pde = 0.0
         epoch_tv = 0.0
+        epoch_l1_data = 0.0
+        epoch_l1_pde = 0.0
         n_items = 0
 
         for t_b, x_b, y_b in loader:
@@ -227,6 +236,8 @@ def fit_data_and_pde(
 
             loss_data = lam_data * loss_fn(u_pred, y_b)
             loss_pde = lam_pde * loss_fn(u_t, v_pred)
+            loss_l1_data = float(lam_l1_data) * l1_fn(u_pred, y_b)
+            loss_l1_pde = float(lam_l1_pde) * l1_fn(u_t, v_pred)
 
             loss_tv = u_pred.new_tensor(0.0)
             if tv_terms:
@@ -234,7 +245,7 @@ def fit_data_and_pde(
                     if float(lam_tv) != 0.0:
                         loss_tv = loss_tv + float(lam_tv) * tv_fn(u_pred, t_b, x_b)
 
-            loss = loss_data + loss_pde + loss_tv
+            loss = loss_data + loss_pde + loss_l1_data + loss_l1_pde + loss_tv
 
             opt.zero_grad(set_to_none=True)
             loss.backward()
@@ -245,12 +256,16 @@ def fit_data_and_pde(
             epoch_data += float(loss_data.detach().cpu()) * bs
             epoch_pde += float(loss_pde.detach().cpu()) * bs
             epoch_tv += float(loss_tv.detach().cpu()) * bs
+            epoch_l1_data += float(loss_l1_data.detach().cpu()) * bs
+            epoch_l1_pde += float(loss_l1_pde.detach().cpu()) * bs
             n_items += bs
 
         epoch_total /= max(1, n_items)
         epoch_data /= max(1, n_items)
         epoch_pde /= max(1, n_items)
         epoch_tv /= max(1, n_items)
+        epoch_l1_data /= max(1, n_items)
+        epoch_l1_pde /= max(1, n_items)
 
         losses.append(epoch_total)
         rows.append(
@@ -260,17 +275,26 @@ def fit_data_and_pde(
                 data_loss=float(epoch_data),
                 pde_loss=float(epoch_pde),
                 tv_loss=float(epoch_tv),
+                l1_data_loss=float(epoch_l1_data),
+                l1_pde_loss=float(epoch_l1_pde),
             )
         )
 
         if log_every and (epoch % int(log_every) == 0 or epoch == int(epochs) - 1):
-            print(
+            msg = (
                 f"epoch {epoch:05d}  "
                 f"loss={epoch_total:.6e}  "
                 f"data={epoch_data:.6e}  "
                 f"pde={epoch_pde:.6e}  "
                 f"tv={epoch_tv:.6e}"
             )
+            if float(lam_l1_data) != 0.0 or float(lam_l1_pde) != 0.0:
+                msg = (
+                    msg
+                    + f"  l1_data={epoch_l1_data:.6e}"
+                    + f"  l1_pde={epoch_l1_pde:.6e}"
+                )
+            print(msg)
 
     return u_model, v_model, FitHistory(losses=losses, rows=rows)
 
