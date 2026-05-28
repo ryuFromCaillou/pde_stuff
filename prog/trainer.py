@@ -22,7 +22,67 @@ class TrainerConfig:
     selected_derivs: tuple[str, ...] = ()
     device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        
+#TODO make sure SAPINNTrainer works with downsampling points
+class SAPINNTrainer:
+    """
+    Full implementation of the original SAPINN with a lambda mask and separate optimizers for the model parameters and the lambdas.
+    We'd like to study the training dynamics of the lambdas, and see if we can find any correlation between the final lambda_tv* and
+    the noise level, curvature of initial condition etc.
+    We will also be looking at how different levels of granularity (i.e. downsampling residual values)
+    affect the training dynamics and correlation.
+    Intuition: if we have a very granular lambda mask (e.g. a lambda value for each (x, t) point), then we might be able to see a stronger correlation between the lambda values and the local noise/curvature levels. However, this also makes the optimization problem harder, and might lead to worse overall performance. On the other hand, if we have a single scalar lambda for the entire domain, then the optimization problem is easier, but we might lose some of the granularity in the correlation analysis.
+    Note that in the original SAPINN paper, they use a vector of lambdas for each (x, t) point, but they don't really analyze the training dynamics of the lambdas or their correlation with noise/curvature levels. They mainly focus on the overall performance improvement from using the SAPINN architecture, rather than the interpretability of the lambdas.
+    """
+    def __init__(
+        self,
+        u_model: nn.Module,
+        v_model: nn.Module,
+        cfg: TrainerConfig,
+        *,
+        feature_builder: Optional[Callable] = None,
+    ):
+        self.cfg = cfg
+        self.device = cfg.device
+
+        # lambda_pde and lambda_tv should be tensors of the same size as the number of (x, t) points if we want to have a lambda value for each point.
+
+        self.lambda_pde = nn.Parameter(torch.tensor([cfg.lambda_pde], device=self.device))
+        self.lambda_tv = nn.Parameter(torch.tensor([cfg.lambda_tv], device=self.device))
+
+        self.u = u_model.to(self.device)
+        self.v = v_model.to(self.device)
+
+        self.selected_derivs = cfg.selected_derivs
+
+        # If caller didn't inject a feature_builder, build a default one.
+        # WARNING: this only supports primitive terms
+        if feature_builder is None:
+            self.feature_tens = FeatureTensor(
+                terms=self.selected_derivs,
+                normalize=cfg.feature_normalize,
+            )
+            self.feature_builder = self.feature_tens.build
+        else:
+            self.feature_tens = None
+            self.feature_builder = feature_builder
+
+        self.params = list(self.u.parameters()) + list(self.v.parameters())
+        self.adam = optim.Adam(self.params, lr=cfg.lr)
+
+        self.lbfgs = optim.LBFGS(self.params,
+                                lr=0.1,
+                                max_iter=20,
+                                max_eval=25,
+                                history_size=20,
+                                line_search_fn="strong_wolfe",)
+        self.lam_tv_optimizer = optim.Adam([self.lambda_tv], lr=cfg.lr_tv, maximize=True)
+        self.lam_pde_optimizer = optim.Adam([self.lambda_pde], lr=cfg.lr_pde, maximize=True)
+
+        self.lambda_tv_mask_fn = cfg.lambda_tv_mask_fn
+        self.lambda_pde_mask_fn = cfg.lambda_pde_mask_fn
+
+        self.mse = nn.MSELoss()
+
 class SAPINNScalarTrainer:
     """
     Implements the training loop for a simplified SAPINN based on McClenny et al's 

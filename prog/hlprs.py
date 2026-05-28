@@ -87,6 +87,9 @@ def snapshot_comp(
     snap_no=5,
     snap_which=None,
     round_decimals=6,
+    lam_tv = 0,
+    folder = "",
+    title_name= ""
 ):
     """
     Single-figure version: left = heatmap of u_pred(t,x),
@@ -143,8 +146,10 @@ def snapshot_comp(
     cbar.set_label('u_pred')
     ax0.set_xlabel('x')
     ax0.set_ylabel('t')
-    ax0.set_title('Predicted u(t,x)')
+    ax0.set_title(f'Predicted u(t,x), {title_name}')
 
+    fig_hm.savefig(folder + f"/lam_tv_{lam_tv}_heatmap.png", dpi=300, bbox_inches="tight")
+    plt.close(fig_hm)
     # choose idxs first (same logic you already have)
     if snap_which is None:
         idxs = np.linspace(0, Nt - 1, snap_no, dtype=int)
@@ -175,7 +180,7 @@ def snapshot_comp(
         ax.plot(x_unique, U_no_noise[k, :], '--', alpha=0.9, label="true")
 
         ax.set_xlabel('x')
-        ax.set_ylabel('u')
+        ax.set_ylabel(f'u, {title_name}')
         ax.set_title(f't = {t_unique[k]:.3f}')
         ax.legend(fontsize=7)
 
@@ -183,7 +188,8 @@ def snapshot_comp(
     for ax in axes[len(idxs):]:
         ax.axis('off')
 
-    
+    fig.savefig(folder + f"/lam_tv_{lam_tv}_time_snapshots.png", dpi=300, bbox_inches="tight")
+    plt.close(fig)
     payload = {
         "t_unique": t_unique,
         "x_unique": x_unique,
@@ -248,11 +254,10 @@ def save_to_json(trainer, aux, correct_coeffs, path):
 
     data = aux
 
-    try:
+    if type(trainer) == "SAPINNScalarTrainer":
         data["mask_pde_source"] = inspect.getsource(trainer.cfg.lambda_pde_mask_fn)
         data["mask_tv_source"] = inspect.getsource(trainer.cfg.lambda_tv_mask_fn)
-    except AttributeError:
-        print("couldn't save masking functions. Likely cause is trainer instance being PDETRainer, which doesn't have them as attributes.")
+
     data['learned_coeffs'] = learned_coeffs
     data['correct_coeffs'] = correct_coeffs
     data['coeff_error'] = coeff_error
