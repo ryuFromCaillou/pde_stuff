@@ -1,0 +1,7 @@
+*.pyc
+run_results/
+.vscode/
+__pycache__/
+AGENTS.md
+.venv/
+*.bin
