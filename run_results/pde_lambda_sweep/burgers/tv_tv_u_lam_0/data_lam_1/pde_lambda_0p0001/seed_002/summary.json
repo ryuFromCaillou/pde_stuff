@@ -1,0 +1,45 @@
+{
+  "dataset": "burgers",
+  "seed": 2,
+  "model": "siren",
+  "epochs": 300,
+  "batch_size": 1024,
+  "lr": 0.001,
+  "noise_level": 0.0,
+  "stride_t": 1,
+  "stride_x": 1,
+  "tv_type": "tv_u",
+  "tv_lambda": 0.0,
+  "pde_lambda": 0.0001,
+  "data_lambda": 1.0,
+  "eql_layers": 1,
+  "eql_prod_dim": 2,
+  "final_total_loss": 0.00019173524290609108,
+  "final_data_loss": 0.0001657410786431836,
+  "final_pde_loss": 2.5994164695142593e-05,
+  "final_tv_loss": 0.0,
+  "ux_rel_l2": 0.1750986156665099,
+  "uxx_rel_l2": 0.5927804012802551,
+  "uxxx_rel_l2": 1.6462153038054523,
+  "l2_coeff_error": 0.39143792637020913,
+  "status": 1,
+  "error": "",
+  "pde_names": [
+    "u",
+    "u_x",
+    "u_xx",
+    "uu_x"
+  ],
+  "pde_coeffs": [
+    -0.2617215323707112,
+    0.006637948819966981,
+    0.005209097677198422,
+    -0.709038706036468
+  ],
+  "true_coeffs": [
+    0.0,
+    0.0,
+    0.01,
+    -1.0
+  ]
+}

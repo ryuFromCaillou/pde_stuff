@@ -1,0 +1,5 @@
+dataset,seed,model,epochs,batch_size,lr,noise_level,stride_t,stride_x,tv_type,tv_lambda,final_total_loss,final_data_loss,final_tv_loss,ux_rel_l2,uxx_rel_l2,uxxx_rel_l2,l2_coeff_error,status,error
+burgers,0,siren,300,1024,0.001,0.05,1,1,anisotropic,0.0,0.0019471242447339353,0.0019471242447339353,0.0,0.10303534839900765,0.15987753250685371,0.5521516539822793,0.04901344681911765,1,
+burgers,0,siren,300,1024,0.001,0.05,1,1,anisotropic,0.0001,nan,nan,nan,nan,nan,nan,nan,0,"ValueError(""Unknown tv_type='anisotropic'. Expected one of: tv_u, tv_ux, tv_uxx, laplacian_xt_sq"")"
+burgers,0,siren,300,1024,0.001,0.05,1,1,anisotropic,1e-06,nan,nan,nan,nan,nan,nan,nan,0,"ValueError(""Unknown tv_type='anisotropic'. Expected one of: tv_u, tv_ux, tv_uxx, laplacian_xt_sq"")"
+burgers,0,siren,300,1024,0.001,0.05,1,1,anisotropic,1e-08,nan,nan,nan,nan,nan,nan,nan,0,"ValueError(""Unknown tv_type='anisotropic'. Expected one of: tv_u, tv_ux, tv_uxx, laplacian_xt_sq"")"
