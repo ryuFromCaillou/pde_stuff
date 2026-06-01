@@ -82,7 +82,10 @@ def fit_model_to_data(
     device: str,
     weight_decay: float = 0.0,
     log_every: int = 100,
-    tv_terms: list[tuple[float, callable]] | None = None
+    tv_terms: list[tuple[float, callable]] | None = None,
+    lam_l1_data: float = 0.0,
+    lam_sparse_eql: float = 0.0,
+    sparse_eql_s: float = 1e-3,
 ):
     '''
     Fit a model to training data.
@@ -110,6 +113,7 @@ def fit_model_to_data(
 
     opt = torch.optim.Adam(model.parameters(), lr=float(lr), weight_decay=float(weight_decay))
     loss_fn = torch.nn.MSELoss()
+    l1_fn = torch.nn.L1Loss()
 
     losses: list[float] = []
     rows: list[FitHistoryRow] = []
@@ -119,6 +123,8 @@ def fit_model_to_data(
         epoch_total = 0.0
         epoch_data = 0.0
         epoch_tv = 0.0
+        epoch_l1_data = 0.0
+        epoch_sparse_eql = 0.0
         n_items = 0
 
         for t_b, x_b, y_b in loader:
@@ -138,7 +144,17 @@ def fit_model_to_data(
                     if float(lam_tv) != 0.0:
                         loss_tv = loss_tv + float(lam_tv) * tv_fn(pred, t_b, x_b)
             loss_data = loss_fn(pred, y_b)
-            loss = loss_data + loss_tv
+            loss_l1_data = pred.new_tensor(0.0)
+            if float(lam_l1_data) != 0.0:
+                loss_l1_data = float(lam_l1_data) * l1_fn(pred, y_b)
+
+            loss_sparse_eql = pred.new_tensor(0.0)
+            if float(lam_sparse_eql) != 0.0:
+                loss_sparse_eql = float(lam_sparse_eql) * _smooth_l1_param_sparsity(
+                    model.parameters(), s=float(sparse_eql_s)
+                )
+
+            loss = loss_data + loss_tv + loss_l1_data + loss_sparse_eql
 
             opt.zero_grad(set_to_none=True)
             loss.backward()
@@ -148,12 +164,16 @@ def fit_model_to_data(
             epoch_total += float(loss.detach().cpu()) * bs
             epoch_data += float(loss_data.detach().cpu()) * bs
             epoch_tv += float(loss_tv.detach().cpu()) * bs
+            epoch_l1_data += float(loss_l1_data.detach().cpu()) * bs
+            epoch_sparse_eql += float(loss_sparse_eql.detach().cpu()) * bs
             n_items += bs
         
         # reported loss is averaged over all items in epoch (not averaged per batch)
         epoch_total /= max(1, n_items)
         epoch_data /= max(1, n_items)
         epoch_tv /= max(1, n_items)
+        epoch_l1_data /= max(1, n_items)
+        epoch_sparse_eql /= max(1, n_items)
 
         losses.append(epoch_total)
         rows.append(
@@ -163,8 +183,9 @@ def fit_model_to_data(
                 data_loss=float(epoch_data),
                 pde_loss=0.0,
                 tv_loss=float(epoch_tv),
-                l1_data_loss=0.0,
+                l1_data_loss=float(epoch_l1_data),
                 l1_pde_loss=0.0,
+                sparse_eql_loss=float(epoch_sparse_eql),
             )
         )
 
@@ -174,6 +195,8 @@ def fit_model_to_data(
                 f"loss={epoch_total:.6e}  "
                 f"data={epoch_data:.6e}  "
                 f"tv={epoch_tv:.6e}"
+                + (f"  l1_data={epoch_l1_data:.6e}" if float(lam_l1_data) != 0.0 else "")
+                + (f"  sparse_eql={epoch_sparse_eql:.6e}" if float(lam_sparse_eql) != 0.0 else "")
             )
     return model, FitHistory(losses=losses, rows=rows)
 
