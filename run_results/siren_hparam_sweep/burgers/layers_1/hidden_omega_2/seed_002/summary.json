@@ -1,0 +1,19 @@
+{
+  "dataset": "burgers",
+  "seed": 2,
+  "model": "siren",
+  "hidden_size": 64,
+  "hidden_layers": 1,
+  "first_omega_0": 30.0,
+  "hidden_omega_0": 2.0,
+  "epochs": 300,
+  "batch_size": 1024,
+  "lr": 0.001,
+  "noise_level": 0.05,
+  "stride_t": 1,
+  "stride_x": 1,
+  "final_train_loss": 0.000786877666888315,
+  "min_train_loss": 0.0007783788707225569,
+  "status": 1,
+  "error": ""
+}
