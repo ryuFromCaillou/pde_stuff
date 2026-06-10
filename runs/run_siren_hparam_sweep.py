@@ -28,6 +28,7 @@ from prog import hlprs
 from prog.hlprs import savefig_atomic
 from prog.mlps import SirenMLP
 from utils.derivative_utils import (
+    compute_error_metrics,
     fd_first_centered,
     fd_first_periodic,
     fd_second_centered,
@@ -37,6 +38,22 @@ from utils.derivative_utils import (
 )
 from utils.data_prep_utils import PDETrainDataset
 from utils.fit_utils import fit_model_to_data
+
+
+DERIVATIVE_SUMMARY_FIELDS = [
+    "u_rel_l2",
+    "u_rmse",
+    "u_max_abs",
+    "ux_rel_l2",
+    "ux_rmse",
+    "ux_max_abs",
+    "uxx_rel_l2",
+    "uxx_rmse",
+    "uxx_max_abs",
+    "uxxx_rel_l2",
+    "uxxx_rmse",
+    "uxxx_max_abs",
+]
 
 
 SUMMARY_FIELDS = [
@@ -53,6 +70,7 @@ SUMMARY_FIELDS = [
     "noise_level",
     "stride_t",
     "stride_x",
+    *DERIVATIVE_SUMMARY_FIELDS,
     "final_train_loss",
     "min_train_loss",
     "status",
@@ -85,6 +103,10 @@ class PhysCoordWrapper(torch.nn.Module):
         t_n = (t - self.b_t) / self.a_t
         x_n = (x - self.b_x) / self.a_x
         return self.base_model(t_n, x_n)
+
+
+def _nan_derivative_summary() -> dict[str, float]:
+    return {field: float("nan") for field in DERIVATIVE_SUMMARY_FIELDS}
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
@@ -434,6 +456,8 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
         except Exception as e:
             print(f"[warn] snapshot_comp failed: {e}")
 
+        derivative_summary = _nan_derivative_summary()
+
         try:
             phys_model = PhysCoordWrapper(
                 model,
@@ -450,12 +474,41 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
                 chunk_size=max(1, int(cfg.batch_size)),
             )
             ref_derivs = _fd_derivs_grid(u_grid, x_grid, periodic=str(cfg.dataset).lower() in {"burgers", "burger", "heat"})
+            derivative_summary["u_rel_l2"] = float(compute_error_metrics(pred_derivs["u"], u_grid)["rel_l2"])
+            derivative_summary["u_rmse"] = float(compute_error_metrics(pred_derivs["u"], u_grid)["rmse"])
+            derivative_summary["u_max_abs"] = float(compute_error_metrics(pred_derivs["u"], u_grid)["max_abs"])
+
+            if str(cfg.dataset).lower() in {"burgers", "burger", "heat"}:
+                ux_pred = pred_derivs["ux"]
+                uxx_pred = pred_derivs["uxx"]
+                uxxx_pred = pred_derivs["uxxx"]
+            else:
+                ux_pred = pred_derivs["ux"][:, 1:-1]
+                uxx_pred = pred_derivs["uxx"][:, 1:-1]
+                uxxx_pred = pred_derivs["uxxx"][:, 2:-2]
+
+            ux_metrics = compute_error_metrics(ux_pred, ref_derivs["ux"])
+            uxx_metrics = compute_error_metrics(uxx_pred, ref_derivs["uxx"])
+            uxxx_metrics = compute_error_metrics(uxxx_pred, ref_derivs["uxxx"])
+            derivative_summary.update(
+                {
+                    "ux_rel_l2": float(ux_metrics["rel_l2"]),
+                    "ux_rmse": float(ux_metrics["rmse"]),
+                    "ux_max_abs": float(ux_metrics["max_abs"]),
+                    "uxx_rel_l2": float(uxx_metrics["rel_l2"]),
+                    "uxx_rmse": float(uxx_metrics["rmse"]),
+                    "uxx_max_abs": float(uxx_metrics["max_abs"]),
+                    "uxxx_rel_l2": float(uxxx_metrics["rel_l2"]),
+                    "uxxx_rmse": float(uxxx_metrics["rmse"]),
+                    "uxxx_max_abs": float(uxxx_metrics["max_abs"]),
+                }
+            )
 
             if str(cfg.dataset).lower() in {"burgers", "burger", "heat"}:
                 _plot_derivative_overlays(
                     t_grid,
                     x_grid,
-                    pred_derivs["ux"],
+                    ux_pred,
                     ref_derivs["ux"],
                     run_dir / "ux_overlay.pdf",
                     title=f"{cfg.model} u_x overlays",
@@ -464,7 +517,7 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
                 _plot_derivative_overlays(
                     t_grid,
                     x_grid,
-                    pred_derivs["uxx"],
+                    uxx_pred,
                     ref_derivs["uxx"],
                     run_dir / "uxx_overlay.pdf",
                     title=f"{cfg.model} u_xx overlays",
@@ -473,7 +526,7 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
                 _plot_derivative_overlays(
                     t_grid,
                     x_grid,
-                    pred_derivs["uxxx"],
+                    uxxx_pred,
                     ref_derivs["uxxx"],
                     run_dir / "uxxx_overlay.pdf",
                     title=f"{cfg.model} u_xxx overlays",
@@ -483,7 +536,7 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
                 _plot_derivative_overlays(
                     t_grid,
                     ref_derivs["x_ux"],
-                    pred_derivs["ux"][:, 1:-1],
+                    ux_pred,
                     ref_derivs["ux"],
                     run_dir / "ux_overlay.pdf",
                     title=f"{cfg.model} u_x overlays",
@@ -492,7 +545,7 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
                 _plot_derivative_overlays(
                     t_grid,
                     ref_derivs["x_uxx"],
-                    pred_derivs["uxx"][:, 1:-1],
+                    uxx_pred,
                     ref_derivs["uxx"],
                     run_dir / "uxx_overlay.pdf",
                     title=f"{cfg.model} u_xx overlays",
@@ -501,7 +554,7 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
                 _plot_derivative_overlays(
                     t_grid,
                     ref_derivs["x_uxxx"],
-                    pred_derivs["uxxx"][:, 2:-2],
+                    uxxx_pred,
                     ref_derivs["uxxx"],
                     run_dir / "uxxx_overlay.pdf",
                     title=f"{cfg.model} u_xxx overlays",
@@ -526,6 +579,7 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
             "noise_level": float(cfg.noise_level),
             "stride_t": int(cfg.stride_t),
             "stride_x": int(cfg.stride_x),
+            **derivative_summary,
             "final_train_loss": final_loss,
             "min_train_loss": min_loss,
             "status": 1,
@@ -549,6 +603,7 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
             "noise_level": float(cfg.noise_level),
             "stride_t": int(cfg.stride_t),
             "stride_x": int(cfg.stride_x),
+            **_nan_derivative_summary(),
             "final_train_loss": float("nan"),
             "min_train_loss": float("nan"),
             "status": 0,
