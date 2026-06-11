@@ -171,6 +171,16 @@ def _write_text(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
+def _read_json_if_exists(path: Path) -> dict[str, Any] | None:
+    path = Path(path)
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
 def _load_dataset(cfg: "RunConfig"):
     dataset = str(cfg.dataset).lower().strip()
     if dataset in {"burgers", "burger"}:
@@ -461,6 +471,54 @@ def _active_terms(terms: list[str], coeffs: list[float], *, threshold: float = 1
     return active
 
 
+def _extract_ls_summary_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    terms = list(payload.get("terms", []))
+    coeffs = list(payload.get("coeffs", []))
+    return {
+        "ls_terms": json.dumps(terms),
+        "ls_coeffs": json.dumps(coeffs),
+        "ls_residual_rel_l2": float(payload.get("residual_rel_l2", float("nan"))),
+        "ls_residual_rmse": float(payload.get("residual_rmse", float("nan"))),
+        "ls_rank": int(payload["rank"]) if "rank" in payload and payload.get("rank") is not None else float("nan"),
+        "ls_condition_number": float(payload.get("condition_number", float("nan"))),
+        "ls_coeff_error_l2": float(payload.get("coeff_error_l2", float("nan"))),
+        "ls_active_terms": json.dumps(_active_terms(terms, coeffs)),
+    }
+
+
+def _extract_pde_summary_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "l2_coeff_error": float(payload.get("coeff_error_l2", float("nan"))),
+        "pde_names": list(payload.get("terms", [])),
+        "pde_coeffs": list(payload.get("coeffs", [])),
+        "true_coeffs": list(payload.get("true_pde_coeffs", [])),
+    }
+
+
+def _enrich_summary_from_run_artifacts(summary: dict[str, Any], run_dir: Path) -> dict[str, Any]:
+    enriched = dict(summary)
+    for key, value in _nan_derivative_summary().items():
+        enriched.setdefault(key, value)
+    for key, value in _empty_ls_summary().items():
+        enriched.setdefault(key, value)
+
+    ls_payload = _read_json_if_exists(Path(run_dir) / "least_squares_pde.json")
+    if ls_payload is not None:
+        enriched.update(_extract_ls_summary_from_payload(ls_payload))
+        enriched.update(_extract_pde_summary_from_payload(ls_payload))
+    return enriched
+
+
+def _collect_existing_rows(root: Path) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for summary_path in sorted(root.glob("layers_*/*/seed_*/summary.json")):
+        summary = _read_json_if_exists(summary_path)
+        if not isinstance(summary, dict):
+            continue
+        rows.append(_enrich_summary_from_run_artifacts(summary, summary_path.parent))
+    return rows
+
+
 @dataclass
 class RunConfig:
     dataset: str
@@ -730,16 +788,8 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
                 "pde_coeffs": list(pde_payload["coeffs"]),
                 "true_coeffs": list(pde_payload["true_pde_coeffs"]),
             }
-            ls_summary = {
-                "ls_terms": json.dumps(list(pde_payload["terms"])),
-                "ls_coeffs": json.dumps(list(pde_payload["coeffs"])),
-                "ls_residual_rel_l2": float(pde_payload["residual_rel_l2"]),
-                "ls_residual_rmse": float(pde_payload["residual_rmse"]),
-                "ls_rank": int(pde_payload["rank"]),
-                "ls_condition_number": float(pde_payload["condition_number"]),
-                "ls_coeff_error_l2": float(pde_payload["coeff_error_l2"]),
-                "ls_active_terms": json.dumps(active_terms),
-            }
+            ls_summary = _extract_ls_summary_from_payload(pde_payload)
+            ls_summary["ls_active_terms"] = json.dumps(active_terms)
         except Exception as e:
             print(f"[warn] least-squares PDE extraction failed: {e}")
 
@@ -848,6 +898,7 @@ def main() -> None:
     parser.add_argument("--stride_x", type=int, default=1)
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--dry_run", action="store_true")
+    parser.add_argument("--refresh_from_existing", action="store_true")
 
     parser.add_argument("--burgers_N", type=int, default=256)
     parser.add_argument("--burgers_L", type=float, default=2 * np.pi)
@@ -878,68 +929,68 @@ def main() -> None:
 
     all_rows: list[dict[str, Any]] = []
 
-    for hidden_layers in args.hidden_layers_grid:
-        for hidden_omega_0 in args.hidden_omega_0s:
-            for seed in args.seeds:
-                cfg = RunConfig(
-                    dataset=str(args.dataset),
-                    seed=int(seed),
-                    device=str(args.device),
-                    epochs=int(args.epochs),
-                    batch_size=int(args.batch_size),
-                    lr=float(args.lr),
-                    model="siren",
-                    hidden_size=int(args.hidden_size),
-                    hidden_layers=int(hidden_layers),
-                    first_omega_0=float(args.first_omega_0),
-                    hidden_omega_0=float(hidden_omega_0),
-                    noise_level=float(args.noise_level),
-                    stride_t=int(args.stride_t),
-                    stride_x=int(args.stride_x),
-                    burgers_N=int(args.burgers_N),
-                    burgers_L=float(args.burgers_L),
-                    burgers_nu=float(args.burgers_nu),
-                    burgers_dt=float(args.burgers_dt),
-                    burgers_T=float(args.burgers_T),
-                    allen_N=int(args.allen_N),
-                    allen_x_min=float(args.allen_x_min),
-                    allen_x_max=float(args.allen_x_max),
-                    allen_dt=float(args.allen_dt),
-                    allen_T=float(args.allen_T),
-                    allen_d=float(args.allen_d),
-                    allen_reaction_scale=float(args.allen_reaction_scale),
-                    allen_bc_value=float(args.allen_bc_value),
-                    heat_N=int(args.heat_N),
-                    heat_L=float(args.heat_L),
-                    heat_dt=float(args.heat_dt),
-                    heat_T=float(args.heat_T),
-                    heat_alpha=float(args.heat_alpha),
-                    heat_ic_modes=int(args.heat_ic_modes),
-                )
+    if args.refresh_from_existing:
+        all_rows = _collect_existing_rows(root)
+    else:
+        for hidden_layers in args.hidden_layers_grid:
+            for hidden_omega_0 in args.hidden_omega_0s:
+                for seed in args.seeds:
+                    cfg = RunConfig(
+                        dataset=str(args.dataset),
+                        seed=int(seed),
+                        device=str(args.device),
+                        epochs=int(args.epochs),
+                        batch_size=int(args.batch_size),
+                        lr=float(args.lr),
+                        model="siren",
+                        hidden_size=int(args.hidden_size),
+                        hidden_layers=int(hidden_layers),
+                        first_omega_0=float(args.first_omega_0),
+                        hidden_omega_0=float(hidden_omega_0),
+                        noise_level=float(args.noise_level),
+                        stride_t=int(args.stride_t),
+                        stride_x=int(args.stride_x),
+                        burgers_N=int(args.burgers_N),
+                        burgers_L=float(args.burgers_L),
+                        burgers_nu=float(args.burgers_nu),
+                        burgers_dt=float(args.burgers_dt),
+                        burgers_T=float(args.burgers_T),
+                        allen_N=int(args.allen_N),
+                        allen_x_min=float(args.allen_x_min),
+                        allen_x_max=float(args.allen_x_max),
+                        allen_dt=float(args.allen_dt),
+                        allen_T=float(args.allen_T),
+                        allen_d=float(args.allen_d),
+                        allen_reaction_scale=float(args.allen_reaction_scale),
+                        allen_bc_value=float(args.allen_bc_value),
+                        heat_N=int(args.heat_N),
+                        heat_L=float(args.heat_L),
+                        heat_dt=float(args.heat_dt),
+                        heat_T=float(args.heat_T),
+                        heat_alpha=float(args.heat_alpha),
+                        heat_ic_modes=int(args.heat_ic_modes),
+                    )
 
-                run_dir = (
-                    root
-                    / f"layers_{int(hidden_layers)}"
-                    / f"hidden_omega_{_fmt_value_for_path(float(hidden_omega_0))}"
-                    / f"seed_{int(seed):03d}"
-                )
+                    run_dir = (
+                        root
+                        / f"layers_{int(hidden_layers)}"
+                        / f"hidden_omega_{_fmt_value_for_path(float(hidden_omega_0))}"
+                        / f"seed_{int(seed):03d}"
+                    )
 
-                if args.dry_run:
-                    print(f"[dry_run] {run_dir}")
-                    continue
+                    if args.dry_run:
+                        print(f"[dry_run] {run_dir}")
+                        continue
 
-                summary_path = run_dir / "summary.json"
-                if (not args.overwrite) and summary_path.exists():
-                    try:
-                        prev = json.loads(summary_path.read_text(encoding="utf-8"))
-                        if int(prev.get("status", 0)) == 1:
-                            all_rows.append(prev)
+                    summary_path = run_dir / "summary.json"
+                    if (not args.overwrite) and summary_path.exists():
+                        prev = _read_json_if_exists(summary_path)
+                        if isinstance(prev, dict) and int(prev.get("status", 0)) == 1:
+                            all_rows.append(_enrich_summary_from_run_artifacts(prev, run_dir))
                             continue
-                    except Exception:
-                        pass
 
-                summary = run_one(cfg, run_dir)
-                all_rows.append(summary)
+                    summary = run_one(cfg, run_dir)
+                    all_rows.append(summary)
 
     if not args.dry_run and all_rows:
         _write_csv(root / "summary.csv", all_rows, SUMMARY_FIELDS)
