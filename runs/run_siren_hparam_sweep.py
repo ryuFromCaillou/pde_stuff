@@ -63,6 +63,24 @@ AGGREGATED_DERIVATIVE_FIELDS = [
     "uxxx_rel_l2",
 ]
 
+LS_SUMMARY_FIELDS = [
+    "ls_terms",
+    "ls_coeffs",
+    "ls_residual_rel_l2",
+    "ls_residual_rmse",
+    "ls_rank",
+    "ls_condition_number",
+    "ls_coeff_error_l2",
+    "ls_active_terms",
+]
+
+AGGREGATED_LS_FIELDS = [
+    "ls_residual_rel_l2",
+    "ls_residual_rmse",
+    "ls_condition_number",
+    "ls_coeff_error_l2",
+]
+
 
 SUMMARY_FIELDS = [
     "dataset",
@@ -79,6 +97,7 @@ SUMMARY_FIELDS = [
     "stride_t",
     "stride_x",
     *DERIVATIVE_SUMMARY_FIELDS,
+    *LS_SUMMARY_FIELDS,
     "final_train_loss",
     "min_train_loss",
     "status",
@@ -115,6 +134,19 @@ class PhysCoordWrapper(torch.nn.Module):
 
 def _nan_derivative_summary() -> dict[str, float]:
     return {field: float("nan") for field in DERIVATIVE_SUMMARY_FIELDS}
+
+
+def _empty_ls_summary() -> dict[str, Any]:
+    return {
+        "ls_terms": "",
+        "ls_coeffs": "",
+        "ls_residual_rel_l2": float("nan"),
+        "ls_residual_rmse": float("nan"),
+        "ls_rank": float("nan"),
+        "ls_condition_number": float("nan"),
+        "ls_coeff_error_l2": float("nan"),
+        "ls_active_terms": "",
+    }
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
@@ -421,6 +453,14 @@ def _render_pde_text(payload: dict[str, Any]) -> str:
     )
 
 
+def _active_terms(terms: list[str], coeffs: list[float], *, threshold: float = 1e-8) -> list[str]:
+    active: list[str] = []
+    for term, coeff in zip(terms, coeffs):
+        if abs(float(coeff)) > float(threshold):
+            active.append(str(term))
+    return active
+
+
 @dataclass
 class RunConfig:
     dataset: str
@@ -671,6 +711,7 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
             print(f"[warn] derivative overlay failed: {e}")
 
         pde_summary: dict[str, Any] = {}
+        ls_summary: dict[str, Any] = _empty_ls_summary()
 
         try:
             pde_payload = _build_pde_payload(
@@ -682,11 +723,22 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
             )
             _write_json(run_dir / "least_squares_pde.json", pde_payload)
             _write_text(run_dir / "least_squares_pde.txt", _render_pde_text(pde_payload))
+            active_terms = _active_terms(list(pde_payload["terms"]), list(pde_payload["coeffs"]))
             pde_summary = {
                 "l2_coeff_error": float(pde_payload["coeff_error_l2"]),
                 "pde_names": list(pde_payload["terms"]),
                 "pde_coeffs": list(pde_payload["coeffs"]),
                 "true_coeffs": list(pde_payload["true_pde_coeffs"]),
+            }
+            ls_summary = {
+                "ls_terms": json.dumps(list(pde_payload["terms"])),
+                "ls_coeffs": json.dumps(list(pde_payload["coeffs"])),
+                "ls_residual_rel_l2": float(pde_payload["residual_rel_l2"]),
+                "ls_residual_rmse": float(pde_payload["residual_rmse"]),
+                "ls_rank": int(pde_payload["rank"]),
+                "ls_condition_number": float(pde_payload["condition_number"]),
+                "ls_coeff_error_l2": float(pde_payload["coeff_error_l2"]),
+                "ls_active_terms": json.dumps(active_terms),
             }
         except Exception as e:
             print(f"[warn] least-squares PDE extraction failed: {e}")
@@ -708,6 +760,7 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
             "stride_t": int(cfg.stride_t),
             "stride_x": int(cfg.stride_x),
             **derivative_summary,
+            **ls_summary,
             **pde_summary,
             "final_train_loss": final_loss,
             "min_train_loss": min_loss,
@@ -733,6 +786,7 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
             "stride_t": int(cfg.stride_t),
             "stride_x": int(cfg.stride_x),
             **_nan_derivative_summary(),
+            **_empty_ls_summary(),
             "final_train_loss": float("nan"),
             "min_train_loss": float("nan"),
             "status": 0,
@@ -764,6 +818,11 @@ def _aggregate_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "min_train_loss_std": float(np.std(min_losses, ddof=0)),
         }
         for field in AGGREGATED_DERIVATIVE_FIELDS:
+            values = np.asarray([float(r.get(field, float("nan"))) for r in combo_rows], dtype=np.float64)
+            finite_values = values[np.isfinite(values)]
+            agg_row[f"{field}_mean"] = float(np.mean(finite_values)) if finite_values.size else float("nan")
+            agg_row[f"{field}_std"] = float(np.std(finite_values, ddof=0)) if finite_values.size else float("nan")
+        for field in AGGREGATED_LS_FIELDS:
             values = np.asarray([float(r.get(field, float("nan"))) for r in combo_rows], dtype=np.float64)
             finite_values = values[np.isfinite(values)]
             agg_row[f"{field}_mean"] = float(np.mean(finite_values)) if finite_values.size else float("nan")
@@ -905,6 +964,14 @@ def main() -> None:
                     "uxx_rel_l2_std",
                     "uxxx_rel_l2_mean",
                     "uxxx_rel_l2_std",
+                    "ls_residual_rel_l2_mean",
+                    "ls_residual_rel_l2_std",
+                    "ls_residual_rmse_mean",
+                    "ls_residual_rmse_std",
+                    "ls_condition_number_mean",
+                    "ls_condition_number_std",
+                    "ls_coeff_error_l2_mean",
+                    "ls_coeff_error_l2_std",
                 ],
             )
             _plot_heatmap(

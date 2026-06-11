@@ -172,6 +172,17 @@ If derivative comparisons are computed for the sweep, include the same autograd-
 
 This keeps `summary.csv` usable both for heatmaps built from loss values and for downstream analysis of derivative fidelity.
 
+If least-squares PDE extraction is computed, include flat LS diagnostic columns:
+
+- `ls_terms`
+- `ls_coeffs`
+- `ls_residual_rel_l2`
+- `ls_residual_rmse`
+- `ls_rank`
+- `ls_condition_number`
+- `ls_coeff_error_l2`
+- `ls_active_terms`
+
 ### Dataset-level summary_agg.csv
 `summary_agg.csv` should contain one row per sweep-coordinate group after aggregating over seeds.
 
@@ -182,6 +193,15 @@ For `siren_hparam_sweep`, expected columns are:
 - loss aggregates: `final_train_loss_mean`, `final_train_loss_std`, `min_train_loss_mean`, `min_train_loss_std`
 
 If derivative metrics are present in `summary.csv`, aggregated versions may also be added using the same pattern, for example `ux_rel_l2_mean`, `ux_rel_l2_std`.
+
+If least-squares PDE extraction metrics are present in `summary.csv`, aggregate scalar LS diagnostics using the same mean/std pattern:
+
+- `ls_residual_rel_l2_mean`, `ls_residual_rel_l2_std`
+- `ls_residual_rmse_mean`, `ls_residual_rmse_std`
+- `ls_condition_number_mean`, `ls_condition_number_std`
+- `ls_coeff_error_l2_mean`, `ls_coeff_error_l2_std`
+
+Do not aggregate list/string fields such as `ls_terms`, `ls_coeffs`, or `ls_active_terms` unless a script explicitly defines a stable representation.
 
 ### Derivative Overlays
 Derivative overlay requirement:
