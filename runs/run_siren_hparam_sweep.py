@@ -27,6 +27,7 @@ from Datasets.data.processed.heat_gen.heat_gen import HeatConfig, solve_heat
 from prog import hlprs
 from prog.hlprs import savefig_atomic
 from prog.mlps import SirenMLP
+from utils.extract_pde_ls import build_feature_matrix, eval_model_and_time_derivative, extract_pde_ls
 from utils.derivative_utils import (
     compute_error_metrics,
     fd_first_centered,
@@ -53,6 +54,13 @@ DERIVATIVE_SUMMARY_FIELDS = [
     "uxxx_rel_l2",
     "uxxx_rmse",
     "uxxx_max_abs",
+]
+
+AGGREGATED_DERIVATIVE_FIELDS = [
+    "u_rel_l2",
+    "ux_rel_l2",
+    "uxx_rel_l2",
+    "uxxx_rel_l2",
 ]
 
 
@@ -123,6 +131,12 @@ def _write_csv(path: Path, rows: list[dict[str, Any]], fields: list[str]) -> Non
         writer.writeheader()
         for row in rows:
             writer.writerow({field: row.get(field, "") for field in fields})
+
+
+def _write_text(path: Path, text: str) -> None:
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
 
 
 def _load_dataset(cfg: "RunConfig"):
@@ -332,6 +346,81 @@ def _fd_derivs_grid(u_grid: np.ndarray, x_grid: np.ndarray, *, periodic: bool) -
     }
 
 
+def _true_pde_spec(cfg: "RunConfig") -> tuple[list[str], np.ndarray]:
+    dataset = str(cfg.dataset).lower()
+    if dataset in {"burgers", "burger"}:
+        return ["u", "u_x", "u_xx", "uu_x"], np.array([0.0, 0.0, float(cfg.burgers_nu), -1.0], dtype=float)
+    if dataset in {"allen_cahn", "allen-cahn", "allencahn", "allen"}:
+        reaction_scale = float(cfg.allen_reaction_scale)
+        return ["u", "u_xx", "u3"], np.array([reaction_scale, float(cfg.allen_d), -reaction_scale], dtype=float)
+    return ["u_xx"], np.array([float(cfg.heat_alpha)], dtype=float)
+
+
+def _format_term(term: str) -> str:
+    return {
+        "uu_x": "u*u_x",
+        "u3": "u^3",
+    }.get(term, term)
+
+
+def _build_pde_payload(
+    model: torch.nn.Module,
+    *,
+    cfg: "RunConfig",
+    t_grid: np.ndarray,
+    x_grid: np.ndarray,
+    device: str,
+) -> dict[str, Any]:
+    feature_terms, true_coeffs = _true_pde_spec(cfg)
+    Nt = int(t_grid.size)
+    Nx = int(x_grid.size)
+    t2d = np.repeat(t_grid[:, None], Nx, axis=1)
+    x2d = np.repeat(x_grid[None, :], Nt, axis=0)
+    t_flat = t2d.reshape(-1)
+    x_flat = x2d.reshape(-1)
+
+    pde = extract_pde_ls(model, t_flat, x_flat, feature_terms, device=device)
+    _u_pred_np, u_t_np, _t_torch, x_torch, u_pred_torch = eval_model_and_time_derivative(model, t_flat, x_flat, device)
+    F_np, names, _scales = build_feature_matrix(feature_terms, u_pred_torch, x_torch)
+    coeffs = np.asarray(pde["coeffs"], dtype=float).reshape(-1)
+    target = np.asarray(u_t_np, dtype=float).reshape(-1)
+    pred_target = np.asarray(F_np, dtype=float) @ coeffs
+    residual = pred_target - target
+    coeff_error_l2 = float(np.linalg.norm(coeffs - true_coeffs))
+    singular_values = np.asarray(pde["singular_values"], dtype=float).reshape(-1)
+    condition_number = float(np.max(singular_values) / np.min(singular_values)) if singular_values.size and np.min(singular_values) > 0 else float("inf")
+
+    return {
+        "terms": list(names),
+        "coeffs": coeffs.tolist(),
+        "residual_rel_l2": float(np.linalg.norm(residual) / (np.linalg.norm(target) + 1e-12)),
+        "residual_rmse": float(np.sqrt(np.mean(residual**2))),
+        "rank": int(pde["rank"]),
+        "condition_number": condition_number,
+        "target": "u_t",
+        "method": "numpy_lstsq",
+        "true_pde_terms": list(feature_terms),
+        "true_pde_coeffs": true_coeffs.tolist(),
+        "coeff_error_l2": coeff_error_l2,
+    }
+
+
+def _render_pde_text(payload: dict[str, Any]) -> str:
+    terms = payload["terms"]
+    coeffs = payload["coeffs"]
+    pieces = [f"{float(coeff):+.4f}*{_format_term(str(term))}" for term, coeff in zip(terms, coeffs)]
+    equation = " ".join(pieces).replace("+ -", "- ")
+    return "\n".join(
+        [
+            f"u_t ~= {equation}",
+            f"residual_rel_l2 = {float(payload['residual_rel_l2']):.6e}",
+            f"residual_rmse = {float(payload['residual_rmse']):.6e}",
+            f"coeff_error_l2 = {float(payload['coeff_error_l2']):.6e}",
+            f"condition_number = {float(payload['condition_number']):.6e}",
+        ]
+    )
+
+
 @dataclass
 class RunConfig:
     dataset: str
@@ -508,6 +597,15 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
                 _plot_derivative_overlays(
                     t_grid,
                     x_grid,
+                    pred_derivs["u"],
+                    u_grid,
+                    run_dir / "u_overlay.pdf",
+                    title=f"{cfg.model} u overlays",
+                    ylabel="u",
+                )
+                _plot_derivative_overlays(
+                    t_grid,
+                    x_grid,
                     ux_pred,
                     ref_derivs["ux"],
                     run_dir / "ux_overlay.pdf",
@@ -533,6 +631,15 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
                     ylabel="u_xxx",
                 )
             else:
+                _plot_derivative_overlays(
+                    t_grid,
+                    x_grid,
+                    pred_derivs["u"],
+                    u_grid,
+                    run_dir / "u_overlay.pdf",
+                    title=f"{cfg.model} u overlays",
+                    ylabel="u",
+                )
                 _plot_derivative_overlays(
                     t_grid,
                     ref_derivs["x_ux"],
@@ -563,6 +670,27 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
         except Exception as e:
             print(f"[warn] derivative overlay failed: {e}")
 
+        pde_summary: dict[str, Any] = {}
+
+        try:
+            pde_payload = _build_pde_payload(
+                phys_model,
+                cfg=cfg,
+                t_grid=t_grid,
+                x_grid=x_grid,
+                device=str(cfg.device),
+            )
+            _write_json(run_dir / "least_squares_pde.json", pde_payload)
+            _write_text(run_dir / "least_squares_pde.txt", _render_pde_text(pde_payload))
+            pde_summary = {
+                "l2_coeff_error": float(pde_payload["coeff_error_l2"]),
+                "pde_names": list(pde_payload["terms"]),
+                "pde_coeffs": list(pde_payload["coeffs"]),
+                "true_coeffs": list(pde_payload["true_pde_coeffs"]),
+            }
+        except Exception as e:
+            print(f"[warn] least-squares PDE extraction failed: {e}")
+
         final_loss = float(hist.losses[-1])
         min_loss = float(np.min(np.asarray(hist.losses, dtype=np.float64)))
         summary = {
@@ -580,6 +708,7 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
             "stride_t": int(cfg.stride_t),
             "stride_x": int(cfg.stride_x),
             **derivative_summary,
+            **pde_summary,
             "final_train_loss": final_loss,
             "min_train_loss": min_loss,
             "status": 1,
@@ -625,17 +754,21 @@ def _aggregate_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     for (hidden_layers, hidden_omega_0), combo_rows in sorted(grouped.items(), key=lambda item: (item[0][0], item[0][1])):
         final_losses = np.asarray([float(r["final_train_loss"]) for r in combo_rows], dtype=np.float64)
         min_losses = np.asarray([float(r["min_train_loss"]) for r in combo_rows], dtype=np.float64)
-        agg_rows.append(
-            {
-                "hidden_layers": int(hidden_layers),
-                "hidden_omega_0": float(hidden_omega_0),
-                "num_seeds": int(len(combo_rows)),
-                "final_train_loss_mean": float(np.mean(final_losses)),
-                "final_train_loss_std": float(np.std(final_losses, ddof=0)),
-                "min_train_loss_mean": float(np.mean(min_losses)),
-                "min_train_loss_std": float(np.std(min_losses, ddof=0)),
-            }
-        )
+        agg_row = {
+            "hidden_layers": int(hidden_layers),
+            "hidden_omega_0": float(hidden_omega_0),
+            "num_seeds": int(len(combo_rows)),
+            "final_train_loss_mean": float(np.mean(final_losses)),
+            "final_train_loss_std": float(np.std(final_losses, ddof=0)),
+            "min_train_loss_mean": float(np.mean(min_losses)),
+            "min_train_loss_std": float(np.std(min_losses, ddof=0)),
+        }
+        for field in AGGREGATED_DERIVATIVE_FIELDS:
+            values = np.asarray([float(r.get(field, float("nan"))) for r in combo_rows], dtype=np.float64)
+            finite_values = values[np.isfinite(values)]
+            agg_row[f"{field}_mean"] = float(np.mean(finite_values)) if finite_values.size else float("nan")
+            agg_row[f"{field}_std"] = float(np.std(finite_values, ddof=0)) if finite_values.size else float("nan")
+        agg_rows.append(agg_row)
     return agg_rows
 
 
@@ -764,6 +897,14 @@ def main() -> None:
                     "final_train_loss_std",
                     "min_train_loss_mean",
                     "min_train_loss_std",
+                    "u_rel_l2_mean",
+                    "u_rel_l2_std",
+                    "ux_rel_l2_mean",
+                    "ux_rel_l2_std",
+                    "uxx_rel_l2_mean",
+                    "uxx_rel_l2_std",
+                    "uxxx_rel_l2_mean",
+                    "uxxx_rel_l2_std",
                 ],
             )
             _plot_heatmap(
@@ -781,6 +922,38 @@ def main() -> None:
                 value_key="min_train_loss_mean",
                 path=root / "min_train_loss_heatmap.pdf",
                 title="Mean min train loss",
+            )
+            _plot_heatmap(
+                agg_rows,
+                x_key="hidden_omega_0",
+                y_key="hidden_layers",
+                value_key="u_rel_l2_mean",
+                path=root / "u_rel_l2_heatmap.pdf",
+                title="Mean u relative L2 error",
+            )
+            _plot_heatmap(
+                agg_rows,
+                x_key="hidden_omega_0",
+                y_key="hidden_layers",
+                value_key="ux_rel_l2_mean",
+                path=root / "ux_rel_l2_heatmap.pdf",
+                title="Mean ux relative L2 error",
+            )
+            _plot_heatmap(
+                agg_rows,
+                x_key="hidden_omega_0",
+                y_key="hidden_layers",
+                value_key="uxx_rel_l2_mean",
+                path=root / "uxx_rel_l2_heatmap.pdf",
+                title="Mean uxx relative L2 error",
+            )
+            _plot_heatmap(
+                agg_rows,
+                x_key="hidden_omega_0",
+                y_key="hidden_layers",
+                value_key="uxxx_rel_l2_mean",
+                path=root / "uxxx_rel_l2_heatmap.pdf",
+                title="Mean uxxx relative L2 error",
             )
         print(f"Wrote {root / 'summary.csv'}")
 

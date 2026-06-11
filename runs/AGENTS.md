@@ -26,30 +26,107 @@ For sweep-style experiments, match the concrete layout used by `run_results/sire
                     `ux_overlay.pdf`
                     `uxx_overlay.pdf`
                     `uxxx_overlay.pdf`
+                    `least_squares_pde.json`
+                    `least_squares_pde.txt`
         `summary.csv`
         `summary_agg.csv`
         `final_train_loss_heatmap.pdf`
         `min_train_loss_heatmap.pdf`
+        `u_rel_l2_heatmap.pdf`
+        `ux_rel_l2_heatmap.pdf`
+        `uxx_rel_l2_heatmap.pdf`
+        `uxxx_rel_l2_heatmap.pdf`
 
-For the SIREN hyperparameter sweep specifically, this becomes:
+### Derivative Metric Heatmaps
 
-`run_results/siren_hparam_sweep/`
-    `burgers/`
-        `layers_1/`
-            `hidden_omega_1/`
-                `seed_000/`
-                    `config.json`
-                    `fit_heatmap.pdf`
-                    `fit_snapshots.pdf`
-                    `loss_history.csv`
-                    `summary.json`
-                    `ux_overlay.pdf`
-                    `uxx_overlay.pdf`
-                    `uxxx_overlay.pdf`
-        `summary.csv`
-        `summary_agg.csv`
-        `final_train_loss_heatmap.pdf`
-        `min_train_loss_heatmap.pdf`
+For SIREN hyperparameter sweeps, loss heatmaps are not sufficient. A model may achieve low solution loss while producing poor spatial derivatives.
+
+At the dataset sweep level, generate heatmaps for:
+
+- `final_train_loss_mean`
+- `min_train_loss_mean`
+- `u_rel_l2_mean`
+- `ux_rel_l2_mean`
+- `uxx_rel_l2_mean`
+- `uxxx_rel_l2_mean`
+
+Expected files:
+
+- `final_train_loss_heatmap.pdf`
+- `min_train_loss_heatmap.pdf`
+- `u_rel_l2_heatmap.pdf`
+- `ux_rel_l2_heatmap.pdf`
+- `uxx_rel_l2_heatmap.pdf`
+- `uxxx_rel_l2_heatmap.pdf`
+
+Derivative heatmaps should use the same sweep axes as the training-loss heatmaps. For `siren_hparam_sweep`, use:
+
+- x-axis: `hidden_omega_0`
+- y-axis: `hidden_layers`
+
+The main diagnostic question is whether low function error coincides with low derivative error. If not, derivative fidelity takes priority for PDE discovery.
+
+### Least-Squares PDE Extraction
+
+When derivative diagnostics are available, each trained model may also be used for a post-training least-squares PDE extraction step.
+
+For Burgers-style discovery, construct a feature library from the trained model and solve:
+
+\[
+u_t \approx \Theta(u, u_x, u_{xx}, \ldots)c
+\]
+
+where:
+
+- `u_t` is computed by autograd from the trained model
+- library terms are computed from model outputs and autograd spatial derivatives
+- coefficients are fit by least squares
+- extraction is diagnostic only unless explicitly used in training
+
+Expected per-run files:
+
+- `least_squares_pde.json`
+- `least_squares_pde.txt`
+
+`least_squares_pde.json` should include:
+
+- `terms`: ordered list of library names
+- `coeffs`: fitted coefficient values
+- `residual_rel_l2`
+- `residual_rmse`
+- `rank`
+- `condition_number`
+- `target`: usually `u_t`
+- `method`: for example `numpy_lstsq`
+- `true_pde_terms`, when known
+- `true_pde_coeffs`, when known
+- `coeff_error_l2`, when true coefficients are known
+
+For Burgers, expected interpretable library terms should include at minimum:
+
+- `u`
+- `u_x`
+- `u_xx`
+- `u*u_x`
+
+For viscous Burgers:
+
+\[
+u_t = -u u_x + \nu u_{xx}
+\]
+
+so the expected active terms are:
+
+- `u*u_x`: coefficient near `-1`
+- `u_xx`: coefficient near `nu`
+
+The text file `least_squares_pde.txt` should contain a human-readable equation, for example:
+
+```text
+u_t ≈ -0.9821*u*u_x + 0.0197*u_xx
+residual_rel_l2 = ...
+coeff_error_l2 = ...
+```
 
 ### Per-run summary.json
 At minimum, a per-run `summary.json` should track:
@@ -164,10 +241,18 @@ If per-slice metrics are written to a separate file in the future, name and docu
 5. Review `final_train_loss_heatmap.pdf`
 
 ### Evaluate derivative accuracy
-1. Open summary.json
-2. Inspect ux_rel_l2
-3. Inspect uxx_rel_l2
-4. Inspect derivative_overlays/
+1. Open `summary.json`
+2. Inspect `u_rel_l2`, `ux_rel_l2`, `uxx_rel_l2`, `uxxx_rel_l2`
+3. Inspect `u_overlay.pdf`, `ux_overlay.pdf`, `uxx_overlay.pdf`, `uxxx_overlay.pdf`
+4. Compare dataset-level derivative heatmaps
+5. Prefer models with stable derivative metrics, not merely low train loss
+
+### Evaluate PDE extraction
+1. Open `least_squares_pde.txt`
+2. Check whether the recovered active terms match the known PDE
+3. Open `least_squares_pde.json`
+4. Inspect `residual_rel_l2`, `condition_number`, and `coeff_error_l2`
+5. Compare extraction quality against derivative heatmaps
 
 ## Conventions
 
