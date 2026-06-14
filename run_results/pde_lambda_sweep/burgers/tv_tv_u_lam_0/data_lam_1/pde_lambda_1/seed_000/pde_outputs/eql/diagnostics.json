@@ -1,0 +1,7 @@
+{
+  "method": "eql",
+  "eql_layers": 1,
+  "eql_prod_dim": 2,
+  "readout_dim": 5,
+  "effective_quadratic_matrix_available": true
+}

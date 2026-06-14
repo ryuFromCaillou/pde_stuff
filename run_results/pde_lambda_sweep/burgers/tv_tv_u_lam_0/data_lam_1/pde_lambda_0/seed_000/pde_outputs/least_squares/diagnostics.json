@@ -1,0 +1,9 @@
+{
+  "method": "least_squares",
+  "target": "u_t",
+  "residual_rel_l2": 79.56475445473096,
+  "residual_rmse": 0.33576121331489506,
+  "rank": 4,
+  "condition_number": 364.096714420172,
+  "coeff_error_l2": 0.040470518253042695
+}
