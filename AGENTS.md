@@ -4,6 +4,21 @@
 
 This repository contains PyTorch-based experiments for PDE-Net style workflows: learning surrogate fields, evaluating derivatives/features, fitting PDE coefficients, and running sweeps/ablations. Primary outputs are experiment artifacts under `run_results/` (plots, metrics, saved tensors/models) produced by scripts in `runs/`.
 
+## Agent Role
+
+You are maintaining a PDE discovery research codebase.
+
+Your job is to preserve experimental repeatability, keep outputs interpretable, and avoid hardcoding assumptions tied to one PDE such as Burgers.
+
+Prefer abstractions driven by:
+
+- active dataset config
+- active feature library
+- active PDE extraction method
+- declared sweep axes
+
+When adding outputs, update the corresponding run documentation and summary contracts.
+
 ## Important Regions
 
 - `prog/` -> core training/model code (e.g., trainer, MLPs, feature construction)
@@ -42,3 +57,9 @@ If you want an automated "run -> validate outputs" loop (local or via a remote w
 - `runs/run_output_check.py` to validate a specific `run_results/...` folder against a JSON spec
 - `runs/run_test_loop.py` to repeatedly run a command and validate the latest output
 - Example spec: `runs/regression_specs/tv_sweep_smoke.json`
+
+## Optimization Policy
+
+Helpers may be refactored or optimized when doing so improves clarity, reuse, or consistency with the run contract.
+
+Do not preserve helper behavior merely because it exists. Preserve the output contract unless explicitly changing it.

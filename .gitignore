@@ -2,7 +2,7 @@
 run_results/
 .vscode/
 __pycache__/
-
+artifacts.md
 .venv/
 *.bin
 Datasets/shared/

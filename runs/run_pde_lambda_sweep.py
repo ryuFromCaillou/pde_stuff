@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import math
 from dataclasses import asdict, dataclass
 from pathlib import Path
 import sys
@@ -30,7 +31,16 @@ from prog import hlprs
 from prog.featlib import FeatureTensor
 from prog.hlprs import savefig_atomic
 from prog.mlps import EQL, SirenMLP
-from utils.derivative_utils import compute_error_metrics, fd_first_periodic, fd_second_periodic, fd_third_periodic
+from utils.derivative_utils import (
+    compute_error_metrics,
+    fd_first_centered,
+    fd_first_periodic,
+    fd_second_centered,
+    fd_second_periodic,
+    fd_third_centered,
+    fd_third_periodic,
+)
+from utils.data_prep_utils import PDETrainDataset
 from utils.extract_pde_ls import extract_pde_ls
 from utils.fit_utils import fit_data_and_pde
 from utils.tv_utils import available_tv_types, dispatch_tv
@@ -49,55 +59,6 @@ def _seed_everything(seed: int) -> None:
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
-
-
-def _affine_to_minus1_1(v: np.ndarray) -> tuple[float, float]:
-    v = np.asarray(v, dtype=np.float64)
-    vmin = float(np.min(v))
-    vmax = float(np.max(v))
-    if not np.isfinite(vmin) or not np.isfinite(vmax) or vmax == vmin:
-        raise ValueError("Cannot normalize: invalid range")
-    a = 0.5 * (vmax - vmin)
-    b = 0.5 * (vmax + vmin)
-    return a, b
-
-
-def _to_norm(v: np.ndarray, a: float, b: float) -> np.ndarray:
-    return (np.asarray(v, dtype=np.float64) - float(b)) / float(a)
-
-
-def _make_train_samples(
-    *,
-    t_grid: np.ndarray,
-    x_grid: np.ndarray,
-    u_grid: np.ndarray,
-    stride_t: int,
-    stride_x: int,
-    noise_level: float,
-    seed: int,
-):
-    stride_t = max(1, int(stride_t))
-    stride_x = max(1, int(stride_x))
-
-    rows = np.arange(t_grid.size)[::stride_t]
-    cols = np.arange(x_grid.size)[::stride_x]
-
-    t2d = np.repeat(t_grid[:, None], x_grid.size, axis=1)
-    x2d = np.repeat(x_grid[None, :], t_grid.size, axis=0)
-    u2d = u_grid
-
-    t_s = t2d[np.ix_(rows, cols)].reshape(-1).astype(np.float32)
-    x_s = x2d[np.ix_(rows, cols)].reshape(-1).astype(np.float32)
-    y_s = u2d[np.ix_(rows, cols)].reshape(-1).astype(np.float32)
-
-    if float(noise_level) > 0:
-        rng = np.random.default_rng(int(seed))
-        sigma = float(noise_level) * float(np.std(y_s))
-        y_noisy = (y_s + sigma * rng.standard_normal(size=y_s.shape)).astype(np.float32)
-    else:
-        y_noisy = y_s
-
-    return t_s, x_s, y_s, y_noisy
 
 
 class PhysCoordWrapper(torch.nn.Module):
@@ -134,6 +95,24 @@ def _write_csv(path: Path, rows: list[dict[str, Any]], fields: list[str]) -> Non
         w.writeheader()
         for r in rows:
             w.writerow({k: r.get(k, "") for k in fields})
+
+
+def _write_text(path: Path, text: str) -> None:
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+
+
+def _feature_key(name: str) -> str:
+    return "".join(ch for ch in str(name) if ch.isalnum())
+
+
+def _feature_metric_fields(feature_names: list[str]) -> list[str]:
+    fields: list[str] = []
+    for name in feature_names:
+        key = _feature_key(name)
+        fields.extend([f"{key}_rel_l2", f"{key}_rmse", f"{key}_max_abs"])
+    return fields
 
 
 def _autograd_x_derivs_on_grid(
@@ -200,6 +179,16 @@ def _fd_derivs_periodic(u_grid: np.ndarray, x_grid: np.ndarray) -> dict[str, np.
     return {"ux": ux, "uxx": uxx, "uxxx": uxxx}
 
 
+def _fd_derivs_centered(u_grid: np.ndarray, x_grid: np.ndarray) -> dict[str, np.ndarray]:
+    u_grid = np.asarray(u_grid, dtype=np.float64)
+    x_grid = np.asarray(x_grid, dtype=np.float64).reshape(-1)
+    dx = float(x_grid[1] - x_grid[0]) if x_grid.size >= 2 else 1.0
+    ux = np.stack([fd_first_centered(row, dx) for row in u_grid], axis=0)
+    uxx = np.stack([fd_second_centered(row, dx) for row in u_grid], axis=0)
+    uxxx = np.stack([fd_third_centered(row, dx) for row in u_grid], axis=0)
+    return {"ux": ux, "uxx": uxx, "uxxx": uxxx}
+
+
 def _make_u_model(cfg: "RunConfig") -> torch.nn.Module:
     if str(cfg.model).lower() == "siren":
         return SirenMLP(
@@ -224,6 +213,237 @@ def _feature_terms_for_dataset(dataset: str) -> list[str]:
     if dataset in {"heat"}:
         return ["u_xx"]
     raise ValueError(f"Unknown dataset='{dataset}'")
+
+
+def _true_coeffs_for_dataset(cfg: "RunConfig", feature_terms: list[str]) -> np.ndarray:
+    dataset = str(cfg.dataset).lower().strip()
+    if dataset in {"burgers", "burger"}:
+        return np.array([0.0, 0.0, float(cfg.burgers_nu), -1.0], dtype=float)
+    if dataset in {"allen_cahn", "allen-cahn", "allencahn", "allen"}:
+        r = float(cfg.allen_reaction_scale)
+        return np.array([r, float(cfg.allen_d), -r], dtype=float)
+    if dataset in {"heat"}:
+        return np.array([float(cfg.heat_alpha)], dtype=float)
+    raise ValueError(f"Unknown dataset='{dataset}'")
+
+
+def _reference_feature_grids(
+    *,
+    dataset: str,
+    u_grid: np.ndarray,
+    x_grid: np.ndarray,
+    feature_terms: list[str],
+) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray]]:
+    dataset = str(dataset).lower().strip()
+    u_grid = np.asarray(u_grid, dtype=np.float64)
+    x_grid = np.asarray(x_grid, dtype=np.float64).reshape(-1)
+    if dataset in {"burgers", "burger", "heat"}:
+        derivs = _fd_derivs_periodic(u_grid, x_grid)
+        x_maps = {
+            "u": x_grid,
+            "u_x": x_grid,
+            "u_xx": x_grid,
+            "u_xxx": x_grid,
+            "uu_x": x_grid,
+            "u3": x_grid,
+        }
+        feats = {
+            "u": u_grid,
+            "u_x": derivs["ux"],
+            "u_xx": derivs["uxx"],
+            "u_xxx": derivs["uxxx"],
+            "uu_x": u_grid * derivs["ux"],
+            "u3": u_grid**3,
+        }
+        return {k: feats[k] for k in feature_terms}, {k: x_maps[k] for k in feature_terms}
+
+    derivs = _fd_derivs_centered(u_grid, x_grid)
+    feats = {
+        "u": u_grid,
+        "u_x": derivs["ux"],
+        "u_xx": derivs["uxx"],
+        "u_xxx": derivs["uxxx"],
+        "uu_x": u_grid[:, 1:-1] * derivs["ux"],
+        "u3": u_grid**3,
+    }
+    x_maps = {
+        "u": x_grid,
+        "u_x": x_grid[1:-1],
+        "u_xx": x_grid[1:-1],
+        "u_xxx": x_grid[2:-2],
+        "uu_x": x_grid[1:-1],
+        "u3": x_grid,
+    }
+    return {k: feats[k] for k in feature_terms}, {k: x_maps[k] for k in feature_terms}
+
+
+def _predicted_feature_grids(
+    model: torch.nn.Module,
+    *,
+    t_grid: np.ndarray,
+    x_grid: np.ndarray,
+    feature_terms: list[str],
+    device: str,
+    chunk_size: int,
+) -> tuple[list[str], dict[str, np.ndarray]]:
+    t_grid = np.asarray(t_grid, dtype=np.float32).reshape(-1)
+    x_grid = np.asarray(x_grid, dtype=np.float32).reshape(-1)
+    Nt = int(t_grid.size)
+    Nx = int(x_grid.size)
+    t2d = np.repeat(t_grid[:, None], Nx, axis=1)
+    x2d = np.repeat(x_grid[None, :], Nt, axis=0)
+    t_flat = t2d.reshape(-1, 1)
+    x_flat = x2d.reshape(-1, 1)
+
+    feat_builder = FeatureTensor(feature_terms, normalize=False, keep_raw=True)
+    names: list[str] | None = None
+    cols: dict[str, list[np.ndarray]] = {}
+
+    model = model.to(device)
+    model.eval()
+    chunk_size = max(1, int(chunk_size))
+
+    for i0 in range(0, t_flat.shape[0], chunk_size):
+        i1 = min(t_flat.shape[0], i0 + chunk_size)
+        t_b = torch.from_numpy(t_flat[i0:i1]).to(device).requires_grad_(True)
+        x_b = torch.from_numpy(x_flat[i0:i1]).to(device).requires_grad_(True)
+        with torch.enable_grad():
+            u = model(t_b, x_b)
+            feat_out = feat_builder.build(u, x=x_b)
+        if names is None:
+            names = list(feat_out.names)
+            cols = {name: [] for name in names}
+        raw = feat_out.raw_cols.detach().cpu().numpy()
+        for idx, name in enumerate(names):
+            cols[name].append(raw[:, idx])
+
+    if names is None:
+        raise RuntimeError("No feature names produced.")
+    out = {name: np.concatenate(parts, axis=0).reshape(Nt, Nx) for name, parts in cols.items()}
+    return names, out
+
+
+def _plot_feature_overlay(
+    *,
+    t: np.ndarray,
+    x: np.ndarray,
+    pred: np.ndarray,
+    ref: np.ndarray,
+    path: Path,
+    title: str,
+    ylabel: str,
+    snap_count: int = 5,
+) -> None:
+    if plt is None:
+        return
+    Nt = int(t.size)
+    idxs = np.linspace(0, Nt - 1, min(max(1, snap_count), Nt), dtype=int)
+    ncols = min(3, idxs.size)
+    nrows = int(math.ceil(idxs.size / ncols))
+    fig, axes = plt.subplots(nrows, ncols, figsize=(4 * ncols, 3 * nrows), constrained_layout=True)
+    axes = np.atleast_1d(axes).ravel()
+    for ax, k in zip(axes, idxs):
+        ax.plot(x, ref[k], label="reference", linewidth=1.5)
+        ax.plot(x, pred[k], "--", label="model", linewidth=1.2)
+        ax.set_title(f"t = {t[k]:.3f}")
+        ax.set_xlabel("x")
+        ax.set_ylabel(ylabel)
+        ax.legend(fontsize=8)
+    for ax in axes[idxs.size:]:
+        ax.axis("off")
+    fig.suptitle(title)
+    savefig_atomic(path)
+
+
+def _write_simple_csv(path: Path, header: list[str], rows: list[list[Any]]) -> None:
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(header)
+        w.writerows(rows)
+
+
+def _write_least_squares_outputs(run_dir: Path, payload: dict[str, Any]) -> None:
+    ls_dir = Path(run_dir) / "pde_outputs" / "least_squares"
+    _write_json(ls_dir / "pde.json", payload)
+    pieces = [f"{float(c):+.4f}*{term}" for term, c in zip(payload["terms"], payload["coeffs"])]
+    eqn = " ".join(pieces).replace("+ -", "- ")
+    _write_text(
+        ls_dir / "pde.txt",
+        "\n".join(
+            [
+                f"{payload['target']} ~= {eqn}",
+                f"residual_rel_l2 = {float(payload['residual_rel_l2']):.6e}",
+                f"residual_rmse = {float(payload['residual_rmse']):.6e}",
+                f"coeff_error_l2 = {float(payload.get('coeff_error_l2', float('nan'))):.6e}",
+            ]
+        ),
+    )
+    _write_simple_csv(
+        ls_dir / "coefficients.csv",
+        ["term", "coeff"],
+        [[term, coeff] for term, coeff in zip(payload["terms"], payload["coeffs"])],
+    )
+    _write_json(
+        ls_dir / "diagnostics.json",
+        {
+            "method": payload["method"],
+            "target": payload["target"],
+            "residual_rel_l2": payload["residual_rel_l2"],
+            "residual_rmse": payload["residual_rmse"],
+            "rank": payload["rank"],
+            "condition_number": payload["condition_number"],
+            "coeff_error_l2": payload.get("coeff_error_l2", float("nan")),
+        },
+    )
+
+
+def _write_eql_outputs(run_dir: Path, v_model: torch.nn.Module, feature_names: list[str], true_coeffs: np.ndarray) -> dict[str, Any]:
+    eql_dir = Path(run_dir) / "pde_outputs" / "eql"
+    eql_dir.mkdir(parents=True, exist_ok=True)
+    readout = v_model.readout.weight.detach().cpu().numpy().reshape(-1)
+    base_names = list(feature_names) + [f"prod_{i}" for i in range(max(0, readout.size - len(feature_names)))]
+    _write_simple_csv(
+        eql_dir / "readout_coefficients.csv",
+        ["term", "weight"],
+        [[name, float(weight)] for name, weight in zip(base_names, readout.tolist())],
+    )
+    _write_simple_csv(
+        eql_dir / "coefficients.csv",
+        ["term", "weight"],
+        [[name, float(weight)] for name, weight in zip(base_names, readout.tolist())],
+    )
+
+    diagnostics: dict[str, Any] = {
+        "method": "eql",
+        "eql_layers": int(len(v_model.linears)),
+        "eql_prod_dim": int(v_model.linears[0].out_features) if len(v_model.linears) else 0,
+        "readout_dim": int(readout.size),
+    }
+    try:
+        matrix = v_model.effective_quadratic_matrix(symmetrize=False).detach().cpu().numpy()
+        _write_simple_csv(
+            eql_dir / "effective_quadratic_matrix.csv",
+            ["feature", *feature_names],
+            [[feature_names[i], *matrix[i].tolist()] for i in range(len(feature_names))],
+        )
+        diagnostics["effective_quadratic_matrix_available"] = True
+    except Exception as exc:
+        diagnostics["effective_quadratic_matrix_available"] = False
+        diagnostics["effective_quadratic_matrix_error"] = repr(exc)
+
+    payload = {
+        "method": "eql",
+        "target": "u_t",
+        "feature_names": feature_names,
+        "readout_coeffs": readout.tolist(),
+        "true_pde_coeffs": np.asarray(true_coeffs, dtype=float).reshape(-1).tolist(),
+    }
+    _write_json(eql_dir / "pde.json", payload)
+    _write_text(eql_dir / "pde.txt", "EQL readout written to readout_coefficients.csv")
+    _write_json(eql_dir / "diagnostics.json", diagnostics)
+    return diagnostics
 
 
 def _plot_vs_lambda(
@@ -312,10 +532,14 @@ class RunConfig:
     eval_chunk_size: int = 20000
 
 
-SUMMARY_FIELDS = [
+BASE_SUMMARY_FIELDS = [
     "dataset",
     "seed",
     "model",
+    "hidden_size",
+    "hidden_layers",
+    "first_omega_0",
+    "hidden_omega_0",
     "epochs",
     "batch_size",
     "lr",
@@ -332,22 +556,76 @@ SUMMARY_FIELDS = [
     "final_data_loss",
     "final_pde_loss",
     "final_tv_loss",
-    "ux_rel_l2",
-    "uxx_rel_l2",
-    "uxxx_rel_l2",
-    "l2_coeff_error",
+    "pde_method",
+    "feature_names",
+    "pde_terms",
+    "pde_coeffs",
+    "true_pde_terms",
+    "true_pde_coeffs",
+    "ls_residual_rel_l2",
+    "ls_residual_rmse",
+    "ls_rank",
+    "ls_condition_number",
+    "ls_coeff_error_l2",
+    "ls_num_active_terms",
+    "ls_active_terms",
     "status",
     "error",
-    "pde_names",
-    "pde_coeffs",
-    "true_coeffs",
 ]
+
+
+def _ordered_summary_fields(rows: list[dict[str, Any]]) -> list[str]:
+    feature_fields: list[str] = []
+    for row in rows:
+        for key in row.keys():
+            if key in BASE_SUMMARY_FIELDS:
+                continue
+            if key.endswith(("_rel_l2", "_rmse", "_max_abs")) and key not in feature_fields:
+                feature_fields.append(key)
+    return BASE_SUMMARY_FIELDS[:18] + feature_fields + BASE_SUMMARY_FIELDS[18:]
+
+
+def _aggregate_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    grouped: dict[tuple[float], list[dict[str, Any]]] = {}
+    for row in rows:
+        if int(row.get("status", 0)) != 1:
+            continue
+        key = (float(row["pde_lambda"]),)
+        grouped.setdefault(key, []).append(row)
+
+    metric_keys = set()
+    for row in rows:
+        for key in row.keys():
+            if key.endswith(("_rel_l2", "_rmse", "_max_abs")) or key in {
+                "final_train_loss",
+                "final_total_loss",
+                "final_data_loss",
+                "final_pde_loss",
+                "final_tv_loss",
+                "ls_residual_rel_l2",
+                "ls_residual_rmse",
+                "ls_condition_number",
+                "ls_coeff_error_l2",
+            }:
+                metric_keys.add(key)
+
+    agg_rows: list[dict[str, Any]] = []
+    for (pde_lambda,), group_rows in sorted(grouped.items(), key=lambda item: item[0][0]):
+        agg = {"pde_lambda": float(pde_lambda), "num_seeds": int(len(group_rows))}
+        for key in sorted(metric_keys):
+            vals = np.asarray([float(r.get(key, float("nan"))) for r in group_rows], dtype=np.float64)
+            vals = vals[np.isfinite(vals)]
+            agg[f"{key}_mean"] = float(np.mean(vals)) if vals.size else float("nan")
+            agg[f"{key}_std"] = float(np.std(vals, ddof=0)) if vals.size else float("nan")
+        agg_rows.append(agg)
+    return agg_rows
 
 
 def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
     run_dir = Path(run_dir)
     run_dir.mkdir(parents=True, exist_ok=True)
     _write_json(run_dir / "config.json", asdict(cfg))
+    feature_terms = _feature_terms_for_dataset(str(cfg.dataset).lower().strip())
 
     try:
         _seed_everything(int(cfg.seed))
@@ -395,8 +673,7 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
         if not np.isfinite(u_grid).all():
             raise ValueError(f"{dataset} solver returned non-finite values (nan/inf).")
 
-        # Training samples (physical coords)
-        t_train, x_train, y_clean, y_noisy = _make_train_samples(
+        train_ds = PDETrainDataset(
             t_grid=t_grid,
             x_grid=x_grid,
             u_grid=u_grid,
@@ -404,15 +681,16 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
             stride_x=int(cfg.stride_x),
             noise_level=float(cfg.noise_level),
             seed=int(cfg.seed),
+            normalize=True,
         )
+        t_train_n, x_train_n, y_clean, y_noisy = train_ds.fit_arrays_with_clean()
+        t_train = train_ds.t_train
+        x_train = train_ds.x_train
+        a_t = float(train_ds.t_norm.a)
+        b_t = float(train_ds.t_norm.b)
+        a_x = float(train_ds.x_norm.a)
+        b_x = float(train_ds.x_norm.b)
 
-        # Normalize coords for siren training stability
-        a_t, b_t = _affine_to_minus1_1(t_grid)
-        a_x, b_x = _affine_to_minus1_1(x_grid)
-        t_train_n = _to_norm(t_train, a_t, b_t).astype(np.float32)
-        x_train_n = _to_norm(x_train, a_x, b_x).astype(np.float32)
-
-        feature_terms = _feature_terms_for_dataset(dataset)
         feat = FeatureTensor(terms=feature_terms, normalize=False)
 
         u_model = _make_u_model(cfg)
@@ -464,7 +742,7 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
                         "tv_loss": float("nan"),
                     }
                 )
-        _write_csv(run_dir / "history.csv", history_rows, ["epoch", "total_loss", "data_loss", "pde_loss", "tv_loss"])
+        _write_csv(run_dir / "loss_history.csv", history_rows, ["epoch", "total_loss", "data_loss", "pde_loss", "tv_loss"])
 
         # Wrap for physical evaluation + physical-unit derivatives
         phys_u = PhysCoordWrapper(u_model, a_t=a_t, b_t=b_t, a_x=a_x, b_x=b_x)
@@ -486,20 +764,36 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
         except Exception as e:
             print(f"[warn] snapshot_comp failed: {e}")
 
-        # Derivative error metrics (autograd vs FD control on clean grid)
-        pred_derivs = _autograd_x_derivs_on_grid(
+        feature_names, pred_features = _predicted_feature_grids(
             phys_u,
             t_grid=t_grid,
             x_grid=x_grid,
+            feature_terms=feature_terms,
             device=str(cfg.device),
             chunk_size=int(cfg.eval_chunk_size),
-            max_order=3,
         )
-        ref_derivs = _fd_derivs_periodic(u_grid, x_grid)
-
-        ux_m = compute_error_metrics(pred_derivs["ux"], ref_derivs["ux"])
-        uxx_m = compute_error_metrics(pred_derivs["uxx"], ref_derivs["uxx"])
-        uxxx_m = compute_error_metrics(pred_derivs["uxxx"], ref_derivs["uxxx"])
+        ref_features, ref_xgrids = _reference_feature_grids(
+            dataset=dataset,
+            u_grid=u_grid,
+            x_grid=x_grid,
+            feature_terms=feature_terms,
+        )
+        feature_summary: dict[str, Any] = {}
+        for name in feature_names:
+            key = _feature_key(name)
+            metrics = compute_error_metrics(pred_features[name], ref_features[name])
+            feature_summary[f"{key}_rel_l2"] = float(metrics["rel_l2"])
+            feature_summary[f"{key}_rmse"] = float(metrics["rmse"])
+            feature_summary[f"{key}_max_abs"] = float(metrics["max_abs"])
+            _plot_feature_overlay(
+                t=t_grid,
+                x=ref_xgrids[name],
+                pred=pred_features[name],
+                ref=ref_features[name],
+                path=run_dir / "feature_overlays" / f"{key}_overlay.pdf",
+                title=f"{name} overlay",
+                ylabel=name,
+            )
 
         # PDE extraction via least squares on the full grid (from trained u only)
         Nt = int(t_grid.size)
@@ -509,25 +803,39 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
         t_flat = t2d.reshape(-1)
         x_flat = x2d.reshape(-1)
 
-        if dataset in {"burgers", "burger"}:
-            pde = extract_pde_ls(phys_u, t_flat, x_flat, feature_terms, device=str(cfg.device))
-            true_coeffs = np.array([0.0, 0.0, float(cfg.burgers_nu), -1.0], dtype=float)
-        elif dataset in {"allen_cahn", "allen-cahn", "allencahn", "allen"}:
-            pde = extract_pde_ls(phys_u, t_flat, x_flat, feature_terms, device=str(cfg.device))
-            r = float(cfg.allen_reaction_scale)
-            true_coeffs = np.array([r, float(cfg.allen_d), -r], dtype=float)
-        else:
-            pde = extract_pde_ls(phys_u, t_flat, x_flat, feature_terms, device=str(cfg.device))
-            true_coeffs = np.array([float(cfg.heat_alpha)], dtype=float)
-
+        pde = extract_pde_ls(phys_u, t_flat, x_flat, feature_terms, device=str(cfg.device))
+        true_coeffs = _true_coeffs_for_dataset(cfg, feature_terms)
         coeffs = np.asarray(pde["coeffs"], dtype=float).reshape(-1)
         l2_coeff_error = float(np.linalg.norm(coeffs - true_coeffs))
+        residuals = np.asarray(pde["residuals"], dtype=float).reshape(-1)
+        singular_values = np.asarray(pde["singular_values"], dtype=float).reshape(-1)
+        cond = float(np.max(singular_values) / np.min(singular_values)) if singular_values.size and np.min(singular_values) > 0 else float("inf")
+        ls_payload = {
+            "method": "least_squares",
+            "target": "u_t",
+            "terms": list(pde["names"]),
+            "coeffs": coeffs.tolist(),
+            "residual_rel_l2": float(np.sqrt(residuals[0]) / (np.linalg.norm(coeffs) + 1e-12)) if residuals.size else float("nan"),
+            "residual_rmse": float(np.sqrt(residuals[0] / max(1, t_flat.size))) if residuals.size else float("nan"),
+            "rank": int(pde["rank"]),
+            "condition_number": cond,
+            "true_pde_terms": list(feature_terms),
+            "true_pde_coeffs": true_coeffs.tolist(),
+            "coeff_error_l2": l2_coeff_error,
+        }
+        _write_least_squares_outputs(run_dir, ls_payload)
+        eql_diag = _write_eql_outputs(run_dir, v_model, feature_names, true_coeffs)
+        ls_active_terms = [term for term, coeff in zip(ls_payload["terms"], ls_payload["coeffs"]) if abs(float(coeff)) > 1e-8]
 
         final_row = hist.rows[-1] if hist.rows else None
         summary = {
             "dataset": str(cfg.dataset),
             "seed": int(cfg.seed),
             "model": str(cfg.model),
+            "hidden_size": int(cfg.hidden_size),
+            "hidden_layers": int(cfg.hidden_layers),
+            "first_omega_0": float(cfg.first_omega_0),
+            "hidden_omega_0": float(cfg.hidden_omega_0),
             "epochs": int(cfg.epochs),
             "batch_size": int(cfg.batch_size),
             "lr": float(cfg.lr),
@@ -543,18 +851,29 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
             "final_total_loss": float(
                 final_row.total_loss if final_row else (hist.losses[-1] if hist.losses else float("nan"))
             ),
+            "final_train_loss": float(
+                final_row.total_loss if final_row else (hist.losses[-1] if hist.losses else float("nan"))
+            ),
+            "min_train_loss": float(np.min(np.asarray(hist.losses, dtype=np.float64))) if hist.losses else float("nan"),
             "final_data_loss": float(final_row.data_loss if final_row else float("nan")),
             "final_pde_loss": float(final_row.pde_loss if final_row else float("nan")),
             "final_tv_loss": float(final_row.tv_loss if final_row else float("nan")),
-            "ux_rel_l2": float(ux_m["rel_l2"]),
-            "uxx_rel_l2": float(uxx_m["rel_l2"]),
-            "uxxx_rel_l2": float(uxxx_m["rel_l2"]),
-            "l2_coeff_error": float(l2_coeff_error),
+            "pde_method": "least_squares,eql",
+            "feature_names": json.dumps(feature_names),
+            "pde_terms": json.dumps(list(pde["names"])),
+            "pde_coeffs": json.dumps(coeffs.tolist()),
+            "true_pde_terms": json.dumps(feature_terms),
+            "true_pde_coeffs": json.dumps(true_coeffs.tolist()),
+            "ls_residual_rel_l2": float(ls_payload["residual_rel_l2"]),
+            "ls_residual_rmse": float(ls_payload["residual_rmse"]),
+            "ls_rank": int(ls_payload["rank"]),
+            "ls_condition_number": float(ls_payload["condition_number"]),
+            "ls_coeff_error_l2": float(l2_coeff_error),
+            "ls_num_active_terms": int(len(ls_active_terms)),
+            "ls_active_terms": "|".join(ls_active_terms),
             "status": 1,
             "error": "",
-            "pde_names": list(pde["names"]),
-            "pde_coeffs": coeffs.tolist(),
-            "true_coeffs": true_coeffs.tolist(),
+            **feature_summary,
         }
 
         _write_json(run_dir / "summary.json", summary)
@@ -586,6 +905,10 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
             "dataset": str(cfg.dataset),
             "seed": int(cfg.seed),
             "model": str(cfg.model),
+            "hidden_size": int(cfg.hidden_size),
+            "hidden_layers": int(cfg.hidden_layers),
+            "first_omega_0": float(cfg.first_omega_0),
+            "hidden_omega_0": float(cfg.hidden_omega_0),
             "epochs": int(cfg.epochs),
             "batch_size": int(cfg.batch_size),
             "lr": float(cfg.lr),
@@ -599,13 +922,24 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
             "eql_layers": int(cfg.eql_layers),
             "eql_prod_dim": int(cfg.eql_prod_dim),
             "final_total_loss": float("nan"),
+            "final_train_loss": float("nan"),
+            "min_train_loss": float("nan"),
             "final_data_loss": float("nan"),
             "final_pde_loss": float("nan"),
             "final_tv_loss": float("nan"),
-            "ux_rel_l2": float("nan"),
-            "uxx_rel_l2": float("nan"),
-            "uxxx_rel_l2": float("nan"),
-            "l2_coeff_error": float("nan"),
+            "pde_method": "",
+            "feature_names": json.dumps(feature_terms),
+            "pde_terms": "",
+            "pde_coeffs": "",
+            "true_pde_terms": json.dumps(feature_terms),
+            "true_pde_coeffs": "",
+            "ls_residual_rel_l2": float("nan"),
+            "ls_residual_rmse": float("nan"),
+            "ls_rank": float("nan"),
+            "ls_condition_number": float("nan"),
+            "ls_coeff_error_l2": float("nan"),
+            "ls_num_active_terms": float("nan"),
+            "ls_active_terms": "",
             "status": 0,
             "error": repr(e),
         }
@@ -752,7 +1086,13 @@ def main() -> None:
             all_rows.append(summary)
 
     if (not args.dry_run) and all_rows:
-        _write_csv(root / "summary.csv", all_rows, SUMMARY_FIELDS)
+        summary_fields = _ordered_summary_fields(all_rows)
+        _write_csv(root / "summary.csv", all_rows, summary_fields)
+        agg_rows = _aggregate_rows(all_rows)
+        if agg_rows:
+            agg_fields = ["pde_lambda", "num_seeds"]
+            dynamic_agg = [k for k in agg_rows[0].keys() if k not in {"pde_lambda", "num_seeds"}]
+            _write_csv(root / "summary_agg.csv", agg_rows, agg_fields + dynamic_agg)
         _plot_vs_lambda(
             run_dir=root,
             df_rows=all_rows,
@@ -765,16 +1105,16 @@ def main() -> None:
             run_dir=root,
             df_rows=all_rows,
             x_key="pde_lambda",
-            y_keys=["ux_rel_l2", "uxx_rel_l2", "uxxx_rel_l2"],
-            title="derivative error vs pde_lambda",
-            out_name="deriv_error_vs_pde_lambda.pdf",
+            y_keys=[k for k in summary_fields if k.endswith("_rel_l2")],
+            title="feature error vs pde_lambda",
+            out_name="feature_error_vs_pde_lambda.pdf",
         )
         _plot_vs_lambda(
             run_dir=root,
             df_rows=all_rows,
             x_key="pde_lambda",
-            y_keys=["l2_coeff_error"],
-            title="PDE coeff error vs pde_lambda",
+            y_keys=["ls_coeff_error_l2", "ls_residual_rel_l2"],
+            title="least-squares diagnostics vs pde_lambda",
             out_name="coeff_error_vs_pde_lambda.pdf",
         )
         print(f"Wrote {root / 'summary.csv'}")
@@ -782,4 +1122,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
