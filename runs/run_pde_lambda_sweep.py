@@ -960,7 +960,7 @@ def main() -> None:
     p.add_argument("--hidden_size", type=int, default=64)
     p.add_argument("--hidden_layers", type=int, default=3)
     p.add_argument("--first_omega_0", type=float, default=30.0)
-    p.add_argument("--hidden_omega_0", type=float, default=30.0)
+    p.add_argument("--hidden_omega_0", type=float, default=1.0)
     p.add_argument("--noise_level", type=float, default=0.0)
     p.add_argument("--stride_t", type=int, default=1)
     p.add_argument("--stride_x", type=int, default=1)
