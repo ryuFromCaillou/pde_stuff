@@ -1,0 +1,4 @@
+u_t ~= +0.9335*u -0.8392*u_x +0.0000*u_xx -19.3042*uu_x
+residual_rel_l2 = 2.432307e-01
+residual_rmse = 2.069141e-02
+coeff_error_l2 = 1.834716e+01
