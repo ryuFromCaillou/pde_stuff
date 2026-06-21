@@ -29,14 +29,14 @@ def _fmt_value_for_path(v) -> str:
 def _true_coeffs_for_dataset(dataset: str, cfg: dict) -> tuple[list[str], list[float]]:
     d = str(dataset).lower()
     if d == "burgers":
-        names = ["u", "u_x", "u_xx", "uu_x"]
-        coeffs = [0.0, 0.0, float(cfg["burgers_nu"]), -1.0]
+        names = ["u", "u_x", "u_xx"]
+        coeffs = [0.0, 0.0, float(cfg["burgers_nu"])]
         return names, coeffs
     if d == "allen_cahn":
-        names = ["u", "u_xx", "u3"]
+        names = ["u", "u_x", "u_xx"]
         r = float(cfg["allen_reaction_scale"])
         dcoef = float(cfg["allen_d"])
-        coeffs = [r, dcoef, -r]
+        coeffs = [r, 0.0, dcoef]
         return names, coeffs
     raise ValueError(f"Unknown dataset: {dataset}")
 
@@ -171,9 +171,9 @@ def main() -> None:
         hpc_train_fn = _make_hpc_train_fn(dataset)
 
         if dataset == "burgers":
-            feature_terms = ["u", "u_x", "u_xx", "uu_x"]
+            feature_terms = ["u", "u_x", "u_xx"]
         elif dataset == "allen_cahn":
-            feature_terms = ["u", "u_xx", "u3"]
+            feature_terms = ["u", "u_x", "u_xx"]
         else:
             raise ValueError(f"Unknown dataset: {dataset}")
 

@@ -13,8 +13,7 @@ class FeatureTensorOut:
 
 class FeatureTensor:
     """
-    Builds feature columns: "u", "u_x", "u_xx", ...
-    Any requested non-primitive terms are ignored (with a warning).
+    Builds primitive feature columns: "u", "u_x", "u_xx".
 
     Expects u_out shape (B,1) and x tensor (B,1) with requires_grad=True
     when derivative terms are requested. Returns F shaped (B,K).
@@ -32,7 +31,6 @@ class FeatureTensor:
         self.eps = float(eps)
         self.keep_raw = bool(keep_raw)
 
-        # runtime artifacts
         self.names: List[str] = []
         self.scales: Optional[torch.Tensor] = None
 
@@ -55,11 +53,14 @@ class FeatureTensor:
     ) -> FeatureTensorOut:
         _ = (t, y)  # explicit ignore (keeps signature stable)
 
-        allowed = {"u", "u_x", "u_xx", "uu_x", "u3"}
+        allowed = {"u", "u_x", "u_xx"}
         requested = [s for s in self.terms if s in allowed]
         ignored = [s for s in self.terms if s not in allowed]
         if ignored:
-            print(f"Ignoring non-primitive terms: {ignored} [c:FeatureTensor]")
+            raise ValueError(
+                f"FeatureTensor only supports primitive terms {sorted(allowed)}; "
+                f"got unsupported terms: {ignored}"
+            )
 
         if not requested:
             raise RuntimeError(f"No primitive features requested (allowed: {sorted(allowed)})")
@@ -91,21 +92,16 @@ class FeatureTensor:
                 raw_list.append(raw_)
 
         # Cache derivatives
-        if ("u_x" in need or "u_xx" in need or "uu_x" in need) and x is None:
+        if ("u_x" in need or "u_xx" in need) and x is None:
             raise ValueError("Requested x-derivative feature but x is None.")
 
-        
         u_x = self._grad1(u_out, x)
         u_xx = self._grad1(u_x, x)
-        uu_x = u_out * u_x
-        u3 = u_out ** 3
 
         self.u_raw = u_out
         self.ux_raw = u_x
         self.uxx_raw = u_xx
-        self.uux_raw = uu_x
-        self.u3_raw = u3
-            
+
         # Build primitives
         if "u" in need:
             add("u", u_out, normalize_col=True)
@@ -113,10 +109,6 @@ class FeatureTensor:
             add("u_x", u_x, normalize_col=True)
         if "u_xx" in need:
             add("u_xx", u_xx, normalize_col=True)
-        if "uu_x" in need: 
-            add("uu_x", uu_x, normalize_col=True)
-        if "u3" in need:
-            add("u3", u3, normalize_col=True)
         if not feats:
             raise RuntimeError("No features produced. Check 'terms' and provided coords.")
 

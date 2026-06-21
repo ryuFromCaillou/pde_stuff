@@ -59,162 +59,16 @@ and for every available feature-fidelity metric:
 
 Examples:
 
-- `u_rel_l2_mean`
-- `ux_rel_l2_mean`
-- `uxx_rel_l2_mean`
-- `uxxx_rel_l2_mean`
-- `uux_rel_l2_mean`
-
-Expected files:
-
-- `final_train_loss_heatmap.pdf`
-- `min_train_loss_heatmap.pdf`
-- `<feature_key>_rel_l2_heatmap.pdf`
-
-Examples:
-
-- `u_rel_l2_heatmap.pdf`
-- `ux_rel_l2_heatmap.pdf`
-- `uxx_rel_l2_heatmap.pdf`
-- `uxxx_rel_l2_heatmap.pdf`
-- `uux_rel_l2_heatmap.pdf`
-
-Feature heatmaps should use the same sweep axes as the training-loss heatmaps.
-
-For `siren_hparam_sweep`, use:
-
-- x-axis: `hidden_omega_0`
-- y-axis: `hidden_layers`
-
-The primary diagnostic question is whether low solution error coincides with low feature error. If not, feature fidelity takes priority when evaluating models intended for PDE discovery.
-
-The set of generated feature heatmaps should be determined dynamically from the feature-fidelity metrics present in `summary.csv` or `summary_agg.csv`, rather than from a hardcoded derivative list.
-
-Replace it with this more general version:
-
-### PDE Extraction Outputs
-
-When feature diagnostics are available, each trained model may also be used for post-training PDE extraction.
-
-PDE extraction is method-specific. It should be documented under the method that produced it, not assumed to be least-squares only.
-
-Expected per-run structure:
-
-```text
-pde_outputs/
-    <pde_method>/
-        pde.json
-        pde.txt
-        coefficients.csv
-        diagnostics.json
-````
-
-Current methods of `<pde_method>`:
-
-```text
-least_squares
-eql
-```
-
-For least-squares extraction, solve:
-
-[
-u_t \approx \Theta(u, u_x, u_{xx}, \ldots)c
-]
-
-where:
-
-* `u_t` is computed by autograd from the trained model
-* library terms are determined by the active feature library
-* coefficients are fit by least squares
-* extraction is diagnostic only unless explicitly used in training
-
-`pde_outputs/least_squares/pde.json` should include:
-
-* `method`
-* `target`
-* `terms`
-* `coeffs`
-* `residual_rel_l2`
-* `residual_rmse`
-* `rank`
-* `condition_number`
-* `true_pde_terms`, when known
-* `true_pde_coeffs`, when known
-* `coeff_error_l2`, when true coefficients are known
-
-`pde_outputs/least_squares/pde.txt` should contain a human-readable equation.
-
-For EQL/SymNet-style extraction, write analogous outputs under:
-
-```text
-pde_outputs/eql/
-    pde.json
-    pde.txt
-    coefficients.csv
-    diagnostics.json
-    coeff_error_vs_iteration.pdf
-    effective_quadratic_matrix.csv
-    readout_coefficients.csv
-````
-
-For `effective_quadratic_matrix.csv`, do not manually reconstruct the matrix unless necessary. If the active PDE model is the repo’s `EQL` class, use its existing method:
-
-```python
-v_model.effective_quadratic_matrix(symmetrize=False)
-```
-
-Use `symmetrize=True` only when the analysis explicitly wants symmetric quadratic coefficients.
-
-Only emit `effective_quadratic_matrix.csv` when:
-
-* the PDE model is EQL/SymNet-style,
-* the model exposes `effective_quadratic_matrix(...)`, and
-* the method is valid for the current EQL configuration.
-
-If the method raises because the EQL configuration is not compatible, record that in `diagnostics.json` instead of inventing a replacement matrix.
-
-`readout_coefficients.csv` should come directly from the EQL readout layer weights.
-
-`product_terms.json` should only be written if product-neuron terms are explicitly extracted from the EQL linear/product layers.
-
-### Per-run summary.json
-At minimum, a per-run `summary.json` should track:
-
-- run identity keys: `dataset`, `seed`, `model`
-- model identity keys: model
-- sweep-coordinate keys for the active experiment
-- train config keys: `epochs`, `batch_size`, `lr`, `noise_level`, `stride_t`, `stride_x`
-- dataset config keys relevant to the solver used for that run
-- optimization outcome keys: `final_train_loss`, `min_train_loss`
-- run state keys: `status`, `error`
-
-When feature diagnostics are available, also include learned-vs-reference feature difference norms in the summary keys.
-
-Use the active feature names returned by the feature library as the source of truth.
-
-For each active feature `<feature_name>`, include:
-
-- `<feature_key>_rel_l2`
-- `<feature_key>_rmse`
-- `<feature_key>_max_abs`
-
-where `<feature_key>` is a filename/column-safe version of the feature name.
-
-Examples:
-
-- `u` → `u_rel_l2`, `u_rmse`, `u_max_abs`
-- `u_x` → `ux_rel_l2`, `ux_rmse`, `ux_max_abs`
-- `u_xx` → `uxx_rel_l2`, `uxx_rmse`, `uxx_max_abs`
-- `u_xxx` → `uxxx_rel_l2`, `uxxx_rmse`, `uxxx_max_abs`
-- `uu_x` → `uux_rel_l2`, `uux_rmse`, `uux_max_abs`
+- `u` -> `u_rel_l2`, `u_rmse`, `u_max_abs`
+- `u_x` -> `ux_rel_l2`, `ux_rmse`, `ux_max_abs`
+- `u_xx` -> `uxx_rel_l2`, `uxx_rmse`, `uxx_max_abs`
 
 These keys should be interpreted as difference norms between:
 
 - feature values computed from the trained model
 - reference feature values computed on the clean grid
 
-The trained-model side should use the active feature library implementation as the source of truth. The reference side should use the same feature definitions, using finite differences or analytic/reference operators as needed for clean-grid data.
+The trained-model side should use the active primitive feature library implementation as the source of truth. The reference side should use the same feature definitions, using finite differences or analytic/reference operators as needed for clean-grid data.
 
 If a run also performs PDE extraction or regularized fitting, extend summary.json with experiment-specific keys such as:
 
@@ -225,10 +79,20 @@ If a run also performs PDE extraction or regularized fitting, extend summary.jso
 - coeff_error_l2
 - pde_method
 - feature_names
+- ls_method
+- ls_terms
+- ls_coeffs
 - pde_terms
 - pde_coeffs
 - true_pde_terms
 - true_pde_coeffs
+- ls_true_pde_terms
+- ls_true_pde_coeffs
+- eql_method
+- eql_feature_names
+- eql_readout_terms
+- eql_readout_coeffs
+- eql_readout_dim
 
 PDE extraction fields are optional and should only be present when the corresponding extraction method was executed.
 
@@ -243,9 +107,11 @@ For the active sweep, expected baseline columns are:
 - scalar outcomes
 - run state
 
+For EQL-style training, the feature library recorded in `feature_names` should be the primitive input set used by the model, not the LS candidate library.
+
 If feature comparisons are computed for the sweep, include the corresponding feature-fidelity summary keys in `summary.csv` as flat columns.
 
-For each active feature reported by the feature library, include:
+For each active feature reported by the primitive feature library, include:
 
 - `<feature_key>_rel_l2`
 - `<feature_key>_rmse`
@@ -253,18 +119,19 @@ For each active feature reported by the feature library, include:
 
 Examples:
 
-- `u` → `u_rel_l2`, `u_rmse`, `u_max_abs`
-- `u_x` → `ux_rel_l2`, `ux_rmse`, `ux_max_abs`
-- `u_xx` → `uxx_rel_l2`, `uxx_rmse`, `uxx_max_abs`
-- `u_xxx` → `uxxx_rel_l2`, `uxxx_rmse`, `uxxx_max_abs`
-- `uu_x` → `uux_rel_l2`, `uux_rmse`, `uux_max_abs`
+- `u` -> `u_rel_l2`, `u_rmse`, `u_max_abs`
+- `u_x` -> `ux_rel_l2`, `ux_rmse`, `ux_max_abs`
+- `u_xx` -> `uxx_rel_l2`, `uxx_rmse`, `uxx_max_abs`
 
-This keeps `summary.csv` usable both for heatmaps built from loss values and for downstream analysis of feature fidelity across different PDE libraries and feature sets.
+This keeps `summary.csv` usable both for heatmaps built from loss values and for downstream analysis of primitive feature fidelity.
 
 If PDE extraction is computed, include method-specific diagnostic columns.
 
 For least-squares extraction, recommended columns include:
 
+- ls_method
+- ls_terms
+- ls_coeffs
 - ls_residual_rel_l2
 - ls_residual_rmse
 - ls_rank
@@ -273,11 +140,22 @@ For least-squares extraction, recommended columns include:
 - ls_num_active_terms
 - ls_active_terms
 
-where `ls_active_terms` is a compact string representation of the active library terms.
+where `ls_terms` is the LS-specific candidate library and `ls_active_terms` is a compact string representation of the active LS terms.
+
+For EQL outputs, recommended columns include:
+
+- eql_method
+- eql_feature_names
+- eql_readout_terms
+- eql_readout_coeffs
+- eql_readout_dim
+- eql_effective_quadratic_matrix_available
+- eql_effective_quadratic_matrix_error
 
 Detailed PDE representations, coefficient vectors, and term lists should remain in:
 
-pde_outputs/least_squares/pde.json
+- `pde_outputs/least_squares/pde.json`
+- `pde_outputs/eql/pde.json`
 
 rather than being expanded into CSV columns.
 
@@ -337,7 +215,7 @@ Do not aggregate list/string fields such as `ls_terms`, `ls_coeffs`, or `ls_acti
 
 Feature overlay requirement:
 
-For each trained SIREN MLP run, generate feature comparison plots for every active feature returned by the feature library.
+For each trained SIREN MLP run, generate feature comparison plots for every active feature returned by the primitive feature library.
 
 Compare:
 
@@ -346,7 +224,7 @@ Compare:
 
 Reference feature values should be computed using the same feature definitions as the active feature library, applied to the clean reference solution. Use finite differences, analytic derivatives, or other documented reference operators as appropriate for the dataset.
 
-The active feature library is the authoritative source of:
+The active primitive feature library is the authoritative source of:
 
 - feature names
 - feature definitions
@@ -366,13 +244,11 @@ For each active feature:
 
 Examples:
 
-- `u → u`
-- `u_x → ux`
-- `u_xx → uxx`
-- `u_xxx → uxxx`
-- `uu_x → uux`
+- `u` -> `u`
+- `u_x` -> `ux`
+- `u_xx` -> `uxx`
 
-When possible, reuse the repository's feature-library implementation for feature naming and feature construction rather than reimplementing feature definitions in plotting code.
+When possible, reuse the repository''s feature-library implementation for feature naming and feature construction rather than reimplementing feature definitions in plotting code.
 
 Use five evenly spaced time slices over the available time domain, or fewer if the grid has fewer than five time indices.
 
@@ -428,15 +304,13 @@ If per-slice metrics are written to a separate file in the future, name and docu
    - `<feature_key>_max_abs_heatmap.pdf`
 5. Prefer models with stable feature-fidelity metrics, not merely low train loss.
 
-The set of evaluated features is determined by the active feature library used during the run. Do not assume a fixed derivative set (`u`, `u_x`, `u_xx`, `u_xxx`). Examples of valid features include:
+The set of evaluated features is determined by the active primitive feature library used during the run. Do not assume a fixed derivative set beyond the primitives supported by the library. Examples of valid features include:
 
 - `u`
 - `u_x`
 - `u_xx`
-- `u_xxx`
-- `uu_x`
 
-and any future features added to the library.
+and any future primitive features added to the library. Composite terms such as `uu_x` and `u3` belong to LS-specific candidate libraries, not the primitive feature library.
 
 ### Evaluate PDE extraction
 1. Open `least_squares_pde.txt`
@@ -448,3 +322,4 @@ and any future features added to the library.
 ### Conventions
 
 - For sweep scripts, prefer using `utils/data_prep_utils.py` (`PDETrainDataset`, `AffineNormalizer`) for subsampling, noise injection, and coordinate normalization to (-1,1), instead of duplicating `_affine_to_minus1_1`, `_to_norm`, or custom train-sample builders inside new `runs/run_*.py` files.
+

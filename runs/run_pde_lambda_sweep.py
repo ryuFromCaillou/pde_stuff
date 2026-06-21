@@ -204,7 +204,18 @@ def _make_v_model(*, feature_dim: int, cfg: "RunConfig") -> torch.nn.Module:
     return EQL(in_dim=int(feature_dim), prod_dim=int(cfg.eql_prod_dim), num_layers=int(cfg.eql_layers), bias=False)
 
 
-def _feature_terms_for_dataset(dataset: str) -> list[str]:
+def _eql_feature_terms_for_dataset(dataset: str) -> list[str]:
+    dataset = str(dataset).lower().strip()
+    if dataset in {"burgers", "burger"}:
+        return ["u", "u_x", "u_xx"]
+    if dataset in {"allen_cahn", "allen-cahn", "allencahn", "allen"}:
+        return ["u", "u_x", "u_xx"]
+    if dataset in {"heat"}:
+        return ["u", "u_x", "u_xx"]
+    raise ValueError(f"Unknown dataset='{dataset}'")
+
+
+def _ls_feature_terms_for_dataset(dataset: str) -> list[str]:
     dataset = str(dataset).lower().strip()
     if dataset in {"burgers", "burger"}:
         return ["u", "u_x", "u_xx", "uu_x"]
@@ -437,13 +448,22 @@ def _write_eql_outputs(run_dir: Path, v_model: torch.nn.Module, feature_names: l
         "method": "eql",
         "target": "u_t",
         "feature_names": feature_names,
+        "readout_terms": base_names,
         "readout_coeffs": readout.tolist(),
         "true_pde_coeffs": np.asarray(true_coeffs, dtype=float).reshape(-1).tolist(),
     }
     _write_json(eql_dir / "pde.json", payload)
     _write_text(eql_dir / "pde.txt", "EQL readout written to readout_coefficients.csv")
     _write_json(eql_dir / "diagnostics.json", diagnostics)
-    return diagnostics
+    return {
+        "eql_method": "eql",
+        "eql_feature_names": json.dumps(feature_names),
+        "eql_readout_terms": json.dumps(base_names),
+        "eql_readout_coeffs": json.dumps(readout.tolist()),
+        "eql_readout_dim": int(readout.size),
+        "eql_effective_quadratic_matrix_available": bool(diagnostics.get("effective_quadratic_matrix_available", False)),
+        "eql_effective_quadratic_matrix_error": diagnostics.get("effective_quadratic_matrix_error", ""),
+    }
 
 
 def _plot_vs_lambda(
@@ -558,10 +578,15 @@ BASE_SUMMARY_FIELDS = [
     "final_tv_loss",
     "pde_method",
     "feature_names",
+    "ls_method",
+    "ls_terms",
+    "ls_coeffs",
     "pde_terms",
     "pde_coeffs",
     "true_pde_terms",
     "true_pde_coeffs",
+    "ls_true_pde_terms",
+    "ls_true_pde_coeffs",
     "ls_residual_rel_l2",
     "ls_residual_rmse",
     "ls_rank",
@@ -569,6 +594,13 @@ BASE_SUMMARY_FIELDS = [
     "ls_coeff_error_l2",
     "ls_num_active_terms",
     "ls_active_terms",
+    "eql_method",
+    "eql_feature_names",
+    "eql_readout_terms",
+    "eql_readout_coeffs",
+    "eql_readout_dim",
+    "eql_effective_quadratic_matrix_available",
+    "eql_effective_quadratic_matrix_error",
     "status",
     "error",
 ]
@@ -625,7 +657,8 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
     run_dir = Path(run_dir)
     run_dir.mkdir(parents=True, exist_ok=True)
     _write_json(run_dir / "config.json", asdict(cfg))
-    feature_terms = _feature_terms_for_dataset(str(cfg.dataset).lower().strip())
+    eql_feature_terms = _eql_feature_terms_for_dataset(str(cfg.dataset).lower().strip())
+    ls_feature_terms = _ls_feature_terms_for_dataset(str(cfg.dataset).lower().strip())
 
     try:
         _seed_everything(int(cfg.seed))
@@ -691,10 +724,10 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
         a_x = float(train_ds.x_norm.a)
         b_x = float(train_ds.x_norm.b)
 
-        feat = FeatureTensor(terms=feature_terms, normalize=False)
+        feat = FeatureTensor(terms=eql_feature_terms, normalize=False)
 
         u_model = _make_u_model(cfg)
-        v_model = _make_v_model(feature_dim=len(feature_terms), cfg=cfg)
+        v_model = _make_v_model(feature_dim=len(eql_feature_terms), cfg=cfg)
 
         tv_terms = None
         if float(cfg.tv_lambda) != 0.0:
@@ -768,7 +801,7 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
             phys_u,
             t_grid=t_grid,
             x_grid=x_grid,
-            feature_terms=feature_terms,
+            feature_terms=eql_feature_terms,
             device=str(cfg.device),
             chunk_size=int(cfg.eval_chunk_size),
         )
@@ -776,7 +809,7 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
             dataset=dataset,
             u_grid=u_grid,
             x_grid=x_grid,
-            feature_terms=feature_terms,
+            feature_terms=eql_feature_terms,
         )
         feature_summary: dict[str, Any] = {}
         for name in feature_names:
@@ -803,8 +836,8 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
         t_flat = t2d.reshape(-1)
         x_flat = x2d.reshape(-1)
 
-        pde = extract_pde_ls(phys_u, t_flat, x_flat, feature_terms, device=str(cfg.device))
-        true_coeffs = _true_coeffs_for_dataset(cfg, feature_terms)
+        pde = extract_pde_ls(phys_u, t_flat, x_flat, ls_feature_terms, device=str(cfg.device))
+        true_coeffs = _true_coeffs_for_dataset(cfg, ls_feature_terms)
         coeffs = np.asarray(pde["coeffs"], dtype=float).reshape(-1)
         l2_coeff_error = float(np.linalg.norm(coeffs - true_coeffs))
         residuals = np.asarray(pde["residuals"], dtype=float).reshape(-1)
@@ -819,7 +852,7 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
             "residual_rmse": float(np.sqrt(residuals[0] / max(1, t_flat.size))) if residuals.size else float("nan"),
             "rank": int(pde["rank"]),
             "condition_number": cond,
-            "true_pde_terms": list(feature_terms),
+            "true_pde_terms": list(ls_feature_terms),
             "true_pde_coeffs": true_coeffs.tolist(),
             "coeff_error_l2": l2_coeff_error,
         }
@@ -848,6 +881,8 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
             "data_lambda": float(cfg.data_lambda),
             "eql_layers": int(cfg.eql_layers),
             "eql_prod_dim": int(cfg.eql_prod_dim),
+            "pde_method": "least_squares,eql",
+            "feature_names": json.dumps(feature_names),
             "final_total_loss": float(
                 final_row.total_loss if final_row else (hist.losses[-1] if hist.losses else float("nan"))
             ),
@@ -858,12 +893,15 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
             "final_data_loss": float(final_row.data_loss if final_row else float("nan")),
             "final_pde_loss": float(final_row.pde_loss if final_row else float("nan")),
             "final_tv_loss": float(final_row.tv_loss if final_row else float("nan")),
-            "pde_method": "least_squares,eql",
-            "feature_names": json.dumps(feature_names),
+            "ls_method": "least_squares",
+            "ls_terms": json.dumps(list(pde["names"])),
+            "ls_coeffs": json.dumps(coeffs.tolist()),
             "pde_terms": json.dumps(list(pde["names"])),
             "pde_coeffs": json.dumps(coeffs.tolist()),
-            "true_pde_terms": json.dumps(feature_terms),
+            "true_pde_terms": json.dumps(ls_feature_terms),
             "true_pde_coeffs": json.dumps(true_coeffs.tolist()),
+            "ls_true_pde_terms": json.dumps(ls_feature_terms),
+            "ls_true_pde_coeffs": json.dumps(true_coeffs.tolist()),
             "ls_residual_rel_l2": float(ls_payload["residual_rel_l2"]),
             "ls_residual_rmse": float(ls_payload["residual_rmse"]),
             "ls_rank": int(ls_payload["rank"]),
@@ -871,6 +909,7 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
             "ls_coeff_error_l2": float(l2_coeff_error),
             "ls_num_active_terms": int(len(ls_active_terms)),
             "ls_active_terms": "|".join(ls_active_terms),
+            **eql_diag,
             "status": 1,
             "error": "",
             **feature_summary,
@@ -921,18 +960,23 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
             "data_lambda": float(cfg.data_lambda),
             "eql_layers": int(cfg.eql_layers),
             "eql_prod_dim": int(cfg.eql_prod_dim),
+            "pde_method": "",
+            "feature_names": json.dumps(eql_feature_terms),
             "final_total_loss": float("nan"),
             "final_train_loss": float("nan"),
             "min_train_loss": float("nan"),
             "final_data_loss": float("nan"),
             "final_pde_loss": float("nan"),
             "final_tv_loss": float("nan"),
-            "pde_method": "",
-            "feature_names": json.dumps(feature_terms),
+            "ls_method": "",
+            "ls_terms": "",
+            "ls_coeffs": "",
             "pde_terms": "",
             "pde_coeffs": "",
-            "true_pde_terms": json.dumps(feature_terms),
+            "true_pde_terms": json.dumps(ls_feature_terms),
             "true_pde_coeffs": "",
+            "ls_true_pde_terms": "",
+            "ls_true_pde_coeffs": "",
             "ls_residual_rel_l2": float("nan"),
             "ls_residual_rmse": float("nan"),
             "ls_rank": float("nan"),
@@ -940,6 +984,13 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
             "ls_coeff_error_l2": float("nan"),
             "ls_num_active_terms": float("nan"),
             "ls_active_terms": "",
+            "eql_method": "",
+            "eql_feature_names": json.dumps(eql_feature_terms),
+            "eql_readout_terms": "",
+            "eql_readout_coeffs": "",
+            "eql_readout_dim": float("nan"),
+            "eql_effective_quadratic_matrix_available": False,
+            "eql_effective_quadratic_matrix_error": "",
             "status": 0,
             "error": repr(e),
         }

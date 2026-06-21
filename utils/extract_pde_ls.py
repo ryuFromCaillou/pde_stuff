@@ -5,8 +5,6 @@ from typing import Iterable
 import numpy as np
 import torch
 
-from prog.featlib import FeatureTensor
-
 
 def eval_model_and_time_derivative(model, t_np, x_np, device: str):
     """
@@ -48,13 +46,42 @@ def build_feature_matrix(feature_terms: Iterable[str], u_pred_torch: torch.Tenso
         names: list[str]
         scales: np.ndarray
     """
-    ft = FeatureTensor(feature_terms, normalize=False, keep_raw=True)
-    out = ft.build(u_pred_torch, x=x_torch)
-    return (
-        out.F.detach().cpu().numpy(),
-        list(out.names),
-        out.scales.detach().cpu().numpy(),
-    )
+    terms = [str(term) for term in feature_terms]
+    allowed = {"u", "u_x", "u_xx", "u_xxx", "uu_x", "u3"}
+    unsupported = [term for term in terms if term not in allowed]
+    if unsupported:
+        raise ValueError(f"Unsupported LS feature terms: {unsupported}")
+
+    def _grad1(y: torch.Tensor, x: torch.Tensor) -> torch.Tensor:
+        return torch.autograd.grad(
+            y, x, grad_outputs=torch.ones_like(y), create_graph=True, retain_graph=True
+        )[0]
+
+    u = u_pred_torch
+    u_x = _grad1(u, x_torch) if any(term in {"u_x", "u_xx", "u_xxx", "uu_x"} for term in terms) else None
+    u_xx = _grad1(u_x, x_torch) if any(term in {"u_xx", "u_xxx"} for term in terms) else None
+    u_xxx = _grad1(u_xx, x_torch) if "u_xxx" in terms else None
+    uu_x = u * u_x if "uu_x" in terms else None
+    u3 = u ** 3 if "u3" in terms else None
+
+    feature_map = {
+        "u": u,
+        "u_x": u_x,
+        "u_xx": u_xx,
+        "u_xxx": u_xxx,
+        "uu_x": uu_x,
+        "u3": u3,
+    }
+    cols = []
+    for term in terms:
+        col = feature_map[term]
+        if col is None:
+            raise ValueError(f"Feature term '{term}' could not be constructed from the available derivatives")
+        cols.append(col if col.ndim == 2 else col[:, None])
+
+    F = torch.cat(cols, dim=1)
+    scales = np.ones(len(terms), dtype=float)
+    return (F.detach().cpu().numpy(), terms, scales)
 
 
 def solve_pde_ls(F_np: np.ndarray, u_t_np: np.ndarray):
@@ -90,4 +117,3 @@ def extract_pde_ls(model, t_np, x_np, feature_terms: Iterable[str], device: str)
         "singular_values": np.asarray(singular_values, dtype=float),
         "scales": np.asarray(scales, dtype=float),
     }
-
