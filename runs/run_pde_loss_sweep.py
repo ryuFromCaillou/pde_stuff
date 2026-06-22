@@ -537,15 +537,12 @@ class RunConfig:
     heat_alpha: float = 0.01
     heat_ic_modes: int = 8
 
-    # sweep parameter
     pde_lambda: float = 1.0
     data_lambda: float = 1.0
 
-    # optional TV during training
     tv_type: str = "tv_u"
     tv_lambda: float = 0.0
 
-    # v_model shape
     eql_layers: int = 1
     eql_prod_dim: int = 2
 
@@ -751,7 +748,6 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
             tv_terms=tv_terms,
         )
 
-        # History CSV
         history_rows: list[dict[str, Any]] = []
         if hist.rows:
             for r in hist.rows:
@@ -777,10 +773,8 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
                 )
         _write_csv(run_dir / "loss_history.csv", history_rows, ["epoch", "total_loss", "data_loss", "pde_loss", "tv_loss"])
 
-        # Wrap for physical evaluation + physical-unit derivatives
         phys_u = PhysCoordWrapper(u_model, a_t=a_t, b_t=b_t, a_x=a_x, b_x=b_x)
 
-        # Snapshot helper plots (best-effort)
         try:
             fig, fig_hm, _payload = hlprs.snapshot_comp(
                 phys_u,
@@ -828,7 +822,6 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
                 ylabel=name,
             )
 
-        # PDE extraction via least squares on the full grid (from trained u only)
         Nt = int(t_grid.size)
         Nx = int(x_grid.size)
         t2d = np.repeat(t_grid[:, None], Nx, axis=1)
@@ -917,7 +910,6 @@ def run_one(cfg: RunConfig, run_dir: Path) -> dict[str, Any]:
 
         _write_json(run_dir / "summary.json", summary)
 
-        # Lightweight visuals (best-effort)
         try:
             if plt is None:
                 raise RuntimeError("matplotlib not available")
@@ -1017,26 +1009,23 @@ def main() -> None:
     p.add_argument("--stride_x", type=int, default=1)
     p.add_argument("--data_lambda", type=float, default=1.0)
 
-    # Optional TV during fitting (held fixed while sweeping PDE lambda)
     p.add_argument("--tv_type", default="tv_u", choices=list(available_tv_types()))
     p.add_argument("--tv_lambda", type=float, default=0.0)
 
-    # v_model shape controls
     p.add_argument("--eql_layers", type=int, default=1)
     p.add_argument("--eql_prod_dim", type=int, default=2)
 
     p.add_argument("--eval_chunk_size", type=int, default=20000)
     p.add_argument("--overwrite", action="store_true")
     p.add_argument("--dry_run", action="store_true")
+    p.add_argument("--sweep_coords", nargs="+", default=["pde_lambda"], help="Sweep coordinate column names (one or two).")
 
-    # Burgers params
     p.add_argument("--burgers_N", type=int, default=256)
     p.add_argument("--burgers_L", type=float, default=2.0)
     p.add_argument("--burgers_nu", type=float, default=0.01)
     p.add_argument("--burgers_dt", type=float, default=1e-3)
     p.add_argument("--burgers_T", type=float, default=1.0)
 
-    # Allen–Cahn params
     p.add_argument("--allen_N", type=int, default=256)
     p.add_argument("--allen_x_min", type=float, default=-1.0)
     p.add_argument("--allen_x_max", type=float, default=1.0)
@@ -1046,7 +1035,6 @@ def main() -> None:
     p.add_argument("--allen_reaction_scale", type=float, default=1.0)
     p.add_argument("--allen_bc_value", type=float, default=0.0)
 
-    # Heat params
     p.add_argument("--heat_N", type=int, default=256)
     p.add_argument("--heat_L", type=float, default=2.0)
     p.add_argument("--heat_dt", type=float, default=1e-3)
@@ -1064,7 +1052,7 @@ def main() -> None:
 
     root = (
         Path("run_results")
-        / "pde_lambda_sweep"
+        / "pde_loss_sweep"
         / str(args.dataset)
         / f"tv_{str(args.tv_type)}_lam_{_fmt_value_for_path(float(args.tv_lambda))}"
         / f"data_lam_{_fmt_value_for_path(float(args.data_lambda))}"

@@ -2,13 +2,27 @@
 
 This folder contains run experiments for assessing model weaknesses wrt hyperparameter sweeps (usually).Primary outputs are experiment artifacts under `run_results/` (plots, metrics, saved tensors/models) produced by scripts. 
 
+## Architectural Constraints (Strict)
+
+To prevent code bloating and single-file monolithic anti-patterns, all submitted code must strictly adhere to the following modular layout:
+
+1. **Separation of Concerns:** Run scripts (`run_*.py`) are *orchestrators only*. They may not contain localized deep learning training loops, numeric analytical math, data generation algorithms, or plot rendering code.
+2. **Module Delegation:**
+   - **Data Sourcing:** Must go through a dataset pipeline or a dynamic registry. Direct implementation of physical grid loops inside execution scripts is forbidden.
+   - **Core Math/Physics:** Finite difference calculations, autograd chunk loops, and error metric definitions must reside inside `utils/physics.py` or `utils/derivative_utils.py`.
+   - **Serialization/IO:** Log tracking, dict payload dumps, and CSV writers must reside in a stateless `utils/io.py` or separate logger module.
+   - **Visualization:** Matplotlib logic must be completely isolated from execution runs. Post-processing engines should ingest `.json` or `.npz` artifacts headlessly after execution to generate plots.
+3. **No Redundant Imports:** Entrypoint scripts should not import heavy visualization frameworks (`matplotlib`) directly if they are only responsible for executing model optimizations.
+
 ## Task Routing (Read First)
 
-| Task type | Start here |
+|Task / Domain component | System Layer Reference | Permitted Agent Modification|
 |---|---|
-| Generate Dataset of pde type | `Datasets/data/processed/` | 
-| Normalizing data grid to (-1,1) | `utils/data_prep_utils.py` |
-| Choose TV type for loss | `tv_utils.py` |
+|Data Generation & Solvers| Datasets/data/processed/ | Consume via registry interfaces only. Do not inline solver math in run files.|
+|Grid Processing & Norms|utils/data_prep_utils.py|Mandatory data baseline engine. Do not duplicate arrays/normalization loops.|
+|Loss & Regularization|utils/tv_utils.py|Functional registration interface for total variations.|
+|Math & Analytical Derivatives|utils/derivative_utils.py|"Add new finite difference operators here only never within the execution routine."|
+|Orchestration / Sweeps|runs/run_*.py|"High-level script that loops over configs, triggers imports and dumps variables."|
 
 ## Expected Outputs
 For sweep-style experiments, match the concrete layout used by `run_results/siren_hparam_sweep`:
@@ -16,7 +30,7 @@ For sweep-style experiments, match the concrete layout used by `run_results/sire
 `Experiment type/`
     `dataset/`
         `sweep_axis_1/`
-            `sweep_axis_2/`
+            `sweep_axis_2/` (if available)
                 `seed_###/`
                     `config.json`
                     `fit_heatmap.pdf`
@@ -46,31 +60,36 @@ For sweep-style experiments, match the concrete layout used by `run_results/sire
 
 ### Feature Metric Heatmaps
 
-For SIREN hyperparameter sweeps, training-loss heatmaps are not sufficient. A model may achieve low solution loss while producing poor feature fidelity.
+For sweep-style experiments, produce aggregated visualizations of scalar outcomes across the active sweep axes. Whether to emit 2D heatmaps or 1D plots depends on the number of sweep coordinates:
 
-At the dataset sweep level, generate heatmaps for:
+- Two sweep coordinates: emit 2D heatmaps indexed by the two sweep axes (recommended for grid-style parameter sweeps).
+- One sweep coordinate: emit 1D summaries (line plots with mean ± std across seeds) rather than a 2D heatmap so results remain interpretable.
+
+Always include these aggregated metrics when available:
 
 - `final_train_loss_mean`
 - `min_train_loss_mean`
 
-and for every available feature-fidelity metric:
+And aggregate every available feature-fidelity metric over seeds using the same mean/std naming pattern:
 
 - `<feature_key>_rel_l2_mean`
 
-Examples:
+Examples of primitive feature keys and their summary columns:
 
 - `u` -> `u_rel_l2`, `u_rmse`, `u_max_abs`
 - `u_x` -> `ux_rel_l2`, `ux_rmse`, `ux_max_abs`
 - `u_xx` -> `uxx_rel_l2`, `uxx_rmse`, `uxx_max_abs`
 
-These keys should be interpreted as difference norms between:
+Interpret these keys as difference norms between model-computed features (using the active primitive feature library) and reference features computed on the clean grid (finite differences or analytic operators as appropriate).
 
-- feature values computed from the trained model
-- reference feature values computed on the clean grid
+File-naming and output conventions (to distinguish 1D vs 2D outputs):
 
-The trained-model side should use the active primitive feature library implementation as the source of truth. The reference side should use the same feature definitions, using finite differences or analytic/reference operators as needed for clean-grid data.
+- Two-sweep coords (2D heatmap): `<sweep_x>_vs_<sweep_y>_<metric>_heatmap.pdf` (e.g. `hidden_layers_vs_hidden_omega_0_final_train_loss_heatmap.pdf`).
+- One-sweep coord (1D line plot): `<sweep_coord>_<metric>_lineplot.pdf` (e.g. `hidden_layers_final_train_loss_lineplot.pdf`). Optionally append `_1d` to the filename if your tooling requires an explicit suffix.
 
-If a run also performs PDE extraction or regularized fitting, extend summary.json with experiment-specific keys such as:
+Scripts should detect the number of active sweep coordinates (from the sweep configuration or from `summary_agg.csv` grouping keys) and choose heatmaps vs lineplots automatically.
+
+If a run also performs PDE extraction or regularized fitting, extend `summary.json` with experiment-specific keys such as:
 
 - tv_type
 - tv_lambda
@@ -158,6 +177,10 @@ Detailed PDE representations, coefficient vectors, and term lists should remain 
 - `pde_outputs/eql/pde.json`
 
 rather than being expanded into CSV columns.
+
+### Configuration Standards
+- Do not add explicit scalar hyperparameter fields for every potential PDE to the core run class configuration.
+- Use a polymorphic approach or a generic dictionary block (`dataset_args`) to isolate dataset-specific physics constraints, preventing horizontal configuration explosion.
 
 ### Dataset-level summary_agg.csv
 
@@ -258,12 +281,6 @@ Each plot should show:
 - feature value on the vertical axis
 - clean-grid reference and model prediction overlaid at each selected time slice
 - the actual plotted time in each subplot title
-
-For `run_siren_hparam_sweep.py`, save these files directly under the run directory:
-
-- `<feature_key>_overlay.pdf`
-
-Do not document a nested `feature_overlays/` folder for this sweep unless the script is updated to actually emit one.
 
 If a future run script also records feature error summaries, use the same learned-vs-reference naming convention as the summary tables:
 
