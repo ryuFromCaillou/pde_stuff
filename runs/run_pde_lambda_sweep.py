@@ -49,13 +49,15 @@ def save_pde_extraction(extraction: dict, output_dir: str, method_name: str = "l
     names = extraction["names"]
 
     # pde.json
+    residuals = np.asarray(extraction.get("residuals", [])).tolist()
+    singular_values = np.asarray(extraction.get("singular_values", [])).tolist()
     pde_json = {
         "method": method_name,
         "feature_names": names,
         "coefficients": coeffs.tolist(),
-        "residuals": extraction.get("residuals", []),
+        "residuals": residuals,
         "rank": int(extraction.get("rank", -1)),
-        "singular_values": extraction.get("singular_values", []),
+        "singular_values": singular_values,
     }
     with open(pde_dir / "pde.json", "w") as f:
         json.dump(pde_json, f, indent=2)
@@ -77,8 +79,8 @@ def save_pde_extraction(extraction: dict, output_dir: str, method_name: str = "l
     # diagnostics.json
     diagnostics = {
         "rank": int(extraction.get("rank", -1)),
-        "singular_values": extraction.get("singular_values", []),
-        "residuals": extraction.get("residuals", []),
+        "singular_values": singular_values,
+        "residuals": residuals,
     }
     with open(pde_dir / "diagnostics.json", "w") as f:
         json.dump(diagnostics, f, indent=2)
