@@ -111,18 +111,37 @@ class EQL(nn.Module):
         #
         #self.linear = nn.Linear(in_dim, prod_dim, bias=bias)
         self.readout = nn.Linear(in_dim + num_layers, 1, bias=False)
-        self.linears = nn.ModuleList([nn.Linear(in_dim+i, prod_dim, bias=False) for i in range(num_layers)])
+        self.linears = nn.ModuleList(
+            [nn.Linear(in_dim, prod_dim, bias=False)]
+            + [nn.Linear(in_dim, 1, bias=False) for i in range(num_layers - 1)]
+        ) if num_layers > 0 else nn.ModuleList()
         
     def forward(self, feats):
+        base_feats = feats
+        prod_terms = []
+
+        prev_prod = None
+
         for i, linear in enumerate(self.linears):
-            Z = linear(feats)  # (N, prod_dim)
-            self.preop_ns = Z  # save for inspection
-            prod_neuron = torch.prod(Z, dim=1, keepdim=True)  # (N,1)
-            self.postop_ns = prod_neuron  # save for inspection
-            feats = torch.cat([feats, prod_neuron], dim=1)        # (N, in_dim+1)
-            self.feats = feats  # save for inspection
-        return self.readout(feats)
-    
+            z = linear(base_feats)
+
+            if i == 0:
+                prod = torch.prod(z, dim=1, keepdim=True)
+            else:
+                prod = prev_prod * z
+
+            prod_terms.append(prod)
+            prev_prod = prod
+
+        if prod_terms:
+            out_feats = torch.cat([base_feats, *prod_terms], dim=1)
+        else:
+            out_feats = base_feats
+
+        self.feats = out_feats
+    return self.readout(out_feats)
+
+
     @torch.no_grad()
     def effective_quadratic_matrix(self, symmetrize: bool = False):
         """
