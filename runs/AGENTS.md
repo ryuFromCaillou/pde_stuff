@@ -107,7 +107,6 @@ If a run also performs PDE extraction or regularized fitting, extend `summary.js
 - true_pde_coeffs
 - ls_true_pde_terms
 - ls_true_pde_coeffs
-- eql_method
 - eql_feature_names
 - eql_readout_terms
 - eql_readout_coeffs

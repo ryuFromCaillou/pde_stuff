@@ -32,12 +32,18 @@ from torch.utils.data import DataLoader, TensorDataset
 from prog.mlps import SirenMLP, EQL
 from prog.trainer import TrainerConfig, PDETrainer
 from Datasets.data.processed.burg_gen.burg_gen import BurgersDatasetConfig, build_dataset_from_burgers
+from utils.derivative_utils import evaluate_primitive_feature_metrics
 from utils.extract_pde_ls import extract_pde_ls
+from utils.feature_plotting import save_primitive_feature_overlays
 
 
 def parse_lambdas(s: str) -> list[float]:
     parts = [p.strip() for p in s.split(",") if p.strip()]
     return [float(p) for p in parts]
+
+
+def monomial_to_term(monomial: tuple[str, ...]) -> str:
+    return "*".join(monomial) if monomial else "1"
 
 
 def save_pde_extraction(extraction: dict, output_dir: str, method_name: str = "least_squares") -> None:
@@ -179,6 +185,32 @@ def run_single(
     # Extract PDE on full grid
     extraction = extract_pde_ls(u_model, t_s, x_s, selected_derivs, device=str(cfg.device))
     save_pde_extraction(extraction, str(seed_dir), method_name="least_squares")
+    eql_products = v_model.product_coefficients(
+        feature_names=list(selected_derivs),
+        include_readout=True,
+    )
+    eql_readout_poly = eql_products.get(f"p{len(v_model.linears) - 1}", {}) if len(v_model.linears) > 0 else {}
+    eql_terms_and_coeffs = sorted(
+        ((monomial_to_term(monomial), float(coeff)) for monomial, coeff in eql_readout_poly.items()),
+        key=lambda item: item[0],
+    )
+    feature_eval = evaluate_primitive_feature_metrics(
+        u_model,
+        t_s,
+        x_s,
+        y_clean,
+        selected_derivs,
+        device=str(cfg.device),
+    )
+    save_primitive_feature_overlays(
+        u_model,
+        t_s,
+        x_s,
+        y_clean,
+        selected_derivs,
+        output_dir=seed_dir / "feature_overlays",
+        device=str(cfg.device),
+    )
 
     # Prepare summary
     final_metrics = loss_history[-1] if loss_history else {}
@@ -193,8 +225,14 @@ def run_single(
         "pde_method": "least_squares",
         "feature_names": extraction["names"],
         "coefficients": extraction["coeffs"].tolist(),
+        "eql_method": "eql",
+        "eql_feature_names": list(selected_derivs),
+        "eql_readout_terms": [term for term, _ in eql_terms_and_coeffs],
+        "eql_readout_coeffs": [coeff for _, coeff in eql_terms_and_coeffs],
+        "eql_readout_dim": int(v_model.readout.in_features),
         "num_samples": int(len(t_s)),
     }
+    summary.update(feature_eval["summary_flat"])
     with open(seed_dir / "summary.json", "w") as f:
         json.dump(summary, f, indent=2)
 

@@ -110,11 +110,13 @@ class EQL(nn.Module):
         super().__init__()
         #
         #self.linear = nn.Linear(in_dim, prod_dim, bias=bias)
-        self.readout = nn.Linear(in_dim + num_layers, 1, bias=False)
+        self.readout = nn.Linear(in_dim + 1, 1, bias=False)
         self.linears = nn.ModuleList(
             [nn.Linear(in_dim, prod_dim, bias=False)]
             + [nn.Linear(in_dim, 1, bias=False) for i in range(num_layers - 1)]
-        ) if num_layers > 0 else nn.ModuleList()
+        ) if num_layers > 0 else nn.ModuleList()    
+        self.update_signal = 'coo'
+
         
     def forward(self, feats):
         base_feats = feats
@@ -134,45 +136,84 @@ class EQL(nn.Module):
             prev_prod = prod
 
         if prod_terms:
-            out_feats = torch.cat([base_feats, *prod_terms], dim=1)
+            out_feats = torch.cat([base_feats, prod], dim=1)
         else:
             out_feats = base_feats
 
         self.feats = out_feats
-    return self.readout(out_feats)
+        return self.readout(out_feats)
 
 
     @torch.no_grad()
-    def effective_quadratic_matrix(self, symmetrize: bool = False):
+    def product_coefficients(self, feature_names=None, include_readout=True):
         """
-        Return degree-2 coefficients in the original input-feature basis.
-    
-        Valid when prod_dim == 2. For num_layers > 1, the full EQL expression may contain
-        higher-order terms, but this returns only the quadratic part.
+        Expand EQL product neurons into polynomial coefficients over the original
+        feature basis.
+
+        Assumes recurrence:
+            p0 = prod_j (w0_j · F)
+            pi = p(i-1) * (wi · F), i > 0
+
+        Returns:
+            dict mapping product name -> dict mapping monomial tuple -> coeff
+
+        Note:
+            The forward pass appends only the final product term to the base
+            features before the readout. Accordingly, include_readout=True only
+            multiplies the final product polynomial by the single product-slot
+            readout weight.
+
+        Example monomial:
+            ("u", "u_x") means u*u_x
+            ("u_x", "u") is kept separate unless you normalize/sort keys yourself.
         """
         if len(self.linears) == 0:
-            raise ValueError("No product layers.")
-    
-        if any(layer.out_features != 2 for layer in self.linears):
-            raise ValueError("effective_quadratic_matrix is only defined for prod_dim == 2.")
-    
+            return {}
+
         K = self.linears[0].in_features
-        w = self.readout.weight[0]
-    
-        if self.readout.in_features < K + len(self.linears):
-            raise ValueError(
-                f"readout has too few inputs: expected at least {K + len(self.linears)}, "
-                f"got {self.readout.in_features}"
-            )
-    
-        M = torch.zeros((K, K), device=w.device, dtype=w.dtype)
-    
-        for k, linear in enumerate(self.linears):
-            A = linear.weight          # shape: (2, K + k)
-            a = A[0, :K]               # original-feature part only
-            b = A[1, :K]
-            w_prod = w[K + k]          # readout weight on appended product neuron
-    
-            M += w_prod * torch.outer(a, b)
-    
-        return 0.5 * (M + M.T) if symmetrize else M
+
+        if feature_names is None:
+            feature_names = [f"f{i}" for i in range(K)]
+        if len(feature_names) != K:
+            raise ValueError(f"Expected {K} feature names, got {len(feature_names)}")
+
+        def linear_coeffs(linear):
+            W = linear.weight.detach().cpu()  # (out_features, K)
+            return [
+                {(feature_names[j],): float(row[j]) for j in range(K) if float(row[j]) != 0.0}
+                for row in W
+            ]
+
+        def multiply_poly(A, B):
+            C = {}
+            for ma, ca in A.items():
+                for mb, cb in B.items():
+                    m = ma + mb          # ordered; does not symmetrize
+                    C[m] = C.get(m, 0.0) + ca * cb
+            return C
+
+        product_polys = {}
+        prev = None
+
+        for i, linear in enumerate(self.linears):
+            parts = linear_coeffs(linear)
+
+            if i == 0:
+                poly = {(): 1.0}
+                for part in parts:
+                    poly = multiply_poly(poly, part)
+            else:
+                if linear.out_features != 1:
+                    raise ValueError("For i > 0, expected linear layer with out_features=1")
+                poly = multiply_poly(prev, parts[0])
+
+            prev = poly
+
+            if include_readout and i == len(self.linears) - 1:
+                readout_weight = float(self.readout.weight[0, K].detach().cpu())
+                poly = {m: c * readout_weight for m, c in poly.items()}
+
+            product_polys[f"p{i}"] = poly
+
+        return product_polys
+        
