@@ -1,0 +1,13 @@
+{
+  "method": "least_squares",
+  "feature_names": [
+    "u",
+    "u_x",
+    "u_xx"
+  ],
+  "coefficients": [
+    -0.0309934553092341,
+    0.020225247586113906,
+    -0.0008775561166536223
+  ],
+  "residuals": 
