@@ -101,12 +101,13 @@ def run_single(cfg_kwargs: dict, data_kwargs: dict, lambda_pde: float, seed: int
     burgers_cfg_keys = {f.name for f in fields(BurgersDatasetConfig)}
     data_cfg = {k: v for k, v in data_kwargs.items() if k in burgers_cfg_keys}
     data_cfg["seed"] = seed
+    data_cfg["stride_t"] = 1
+    data_cfg["stride_x"] = 1
     bcfg = BurgersDatasetConfig(**data_cfg)
     t_s, x_s, y_clean, y_noisy, _ = build_dataset_from_burgers(bcfg)
     t_s = np.unique(t_s)
     x_s = np.unique(x_s)
     y_clean = y_clean.reshape(t_s.shape[0], x_s.shape[0])
-    print(t_s, x_s.shape, y_clean.shape)
 
     dataset = PDETrainDataset(
         t_grid=t_s,
@@ -118,14 +119,7 @@ def run_single(cfg_kwargs: dict, data_kwargs: dict, lambda_pde: float, seed: int
         seed=int(seed),
         normalize=bool(data_kwargs.get("train_normalize", True)),
     )
-    print(f'stride_t: {int(data_kwargs.get("train_stride_t", 1))}')
-    print(f'stride_x: {int(data_kwargs.get("train_stride_x", 1))}')
     loader = DataLoader(dataset, batch_size=cfg_kwargs.get("batch_size", 200), shuffle=True)
-    print(f"num_batches={len(loader)}")
-    for batch in loader:
-        t_b, x_b, u_noisy_b = batch
-        print(f"batch shapes: t={t_b.shape}, x={x_b.shape}, u_noisy={u_noisy_b.shape}")
-        break
     u_model = SirenMLP(
         hidden_size=cfg_kwargs.get("hidden_size", 64),
         hidden_layers=cfg_kwargs.get("hidden_layers", 3),
