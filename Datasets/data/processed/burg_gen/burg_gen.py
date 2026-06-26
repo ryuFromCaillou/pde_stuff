@@ -101,7 +101,7 @@ def build_dataset_from_burgers(cfg):
 
     t_s = t2d[rows, cols].reshape(-1)
     x_s = x2d[rows, cols].reshape(-1)
-    y_s = u2d[rows, cols].reshape(-1)
+    y_s = u2d[rows, cols].reshape(-1) # reshapes from (T_snap, X_pts) to (T_snap * X_pts,)
 
     if cfg.noise_level > 0:
         sigma = cfg.noise_level * np.std(y_s)

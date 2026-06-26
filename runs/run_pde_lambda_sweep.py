@@ -22,6 +22,7 @@ import argparse
 import csv
 import json
 import os
+from dataclasses import fields
 from pathlib import Path
 from typing import Sequence
 
@@ -32,6 +33,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from prog.mlps import SirenMLP, EQL
 from prog.trainer import TrainerConfig, PDETrainer
 from Datasets.data.processed.burg_gen.burg_gen import BurgersDatasetConfig, build_dataset_from_burgers
+from utils.data_prep_utils import PDETrainDataset
 from utils.derivative_utils import evaluate_primitive_feature_metrics
 from utils.extract_pde_ls import extract_pde_ls
 from utils.feature_plotting import save_primitive_feature_overlays
@@ -92,35 +94,36 @@ def save_pde_extraction(extraction: dict, output_dir: str, method_name: str = "l
         json.dump(diagnostics, f, indent=2)
 
 
-def run_single(
-    cfg_kwargs: dict,
-    data_kwargs: dict,
-    lambda_pde: float,
-    seed: int,
-    base_out_dir: str,
-) -> dict:
-    """Train on a single lambda_pde value and seed."""
-
-    # Setup output directory
-    seed_dir = Path(base_out_dir) / "burgers" / f"lambda_{lambda_pde:.6f}".rstrip('0').rstrip('.') / f"seed_{seed:03d}"
+def run_single(cfg_kwargs: dict, data_kwargs: dict, lambda_pde: float, seed: int, base_out_dir: str | Path) -> dict:
+    seed_dir = Path(base_out_dir) / "burgers" / f"lambda_{lambda_pde:.6f}".rstrip("0").rstrip(".") / f"seed_{seed:03d}"
     seed_dir.mkdir(parents=True, exist_ok=True)
 
-    # Build dataset
-    data_cfg = dict(data_kwargs)
+    burgers_cfg_keys = {f.name for f in fields(BurgersDatasetConfig)}
+    data_cfg = {k: v for k, v in data_kwargs.items() if k in burgers_cfg_keys}
     data_cfg["seed"] = seed
     bcfg = BurgersDatasetConfig(**data_cfg)
     t_s, x_s, y_clean, y_noisy, _ = build_dataset_from_burgers(bcfg)
+    t_s = np.unique(t_s)
+    x_s = np.unique(x_s)
+    y_clean = y_clean.reshape(t_s.shape[0], x_s.shape[0])
+    print(t_s, x_s.shape, y_clean.shape)
 
-    # Create dataloader
-    t_t = torch.from_numpy(t_s).view(-1, 1)
-    x_t = torch.from_numpy(x_s).view(-1, 1)
-    y_noisy_t = torch.from_numpy(y_noisy).view(-1, 1)
-    y_clean_t = torch.from_numpy(y_clean).view(-1, 1)
-
-    dataset = TensorDataset(t_t, x_t, y_noisy_t, y_clean_t)
-    loader = DataLoader(dataset, batch_size=cfg_kwargs.get("batch_size", 1024), shuffle=True)
-
-    # Models
+    dataset = PDETrainDataset(
+        t_grid=t_s,
+        x_grid=x_s,
+        u_grid=y_clean,
+        stride_t=int(data_kwargs.get("train_stride_t", 1)),
+        stride_x=int(data_kwargs.get("train_stride_x", 1)),
+        noise_level=float(data_kwargs.get("train_noise_level", data_kwargs.get("noise_level", 0.0))),
+        seed=int(seed),
+        normalize=bool(data_kwargs.get("train_normalize", True)),
+    )
+    loader = DataLoader(dataset, batch_size=cfg_kwargs.get("batch_size", 200), shuffle=True)
+    print(f"num_batches={len(loader)}")
+    for batch in loader:
+        t_b, x_b, u_noisy_b = batch
+        print(f"batch shapes: t={t_b.shape}, x={x_b.shape}, u_noisy={u_noisy_b.shape}")
+        break
     u_model = SirenMLP(
         hidden_size=cfg_kwargs.get("hidden_size", 64),
         hidden_layers=cfg_kwargs.get("hidden_layers", 3),
@@ -128,7 +131,6 @@ def run_single(
     selected_derivs = tuple(cfg_kwargs.get("selected_derivs", ("u", "u_x", "u_xx")))
     v_model = EQL(in_dim=len(selected_derivs))
 
-    # Trainer config
     cfg = TrainerConfig(lr=cfg_kwargs.get("lr", 1e-3))
     cfg.lambda_pde = float(lambda_pde)
     cfg.lambda_data = float(cfg_kwargs.get("lambda_data", 1.0))
@@ -139,61 +141,55 @@ def run_single(
     setattr(cfg, "feature_normalize", True)
 
     trainer = PDETrainer(u_model, v_model, cfg)
-
     epochs = int(cfg_kwargs.get("epochs", 200))
 
-    # Save config
-    config_dict = {
-        "lambda_pde": float(lambda_pde),
-        "seed": int(seed),
-        "epochs": int(epochs),
-        "batch_size": int(cfg_kwargs.get("batch_size", 1024)),
-        "lr": float(cfg_kwargs.get("lr", 1e-3)),
-        "lambda_data": float(cfg_kwargs.get("lambda_data", 1.0)),
-        "lambda_reg": float(cfg_kwargs.get("lambda_reg", 1e-3)),
-        "lambda_tv": float(cfg_kwargs.get("lambda_tv", 0.0)),
-        "selected_derivs": list(selected_derivs),
-        "noise_level": float(data_kwargs.get("noise_level", 0.05)),
-    }
     with open(seed_dir / "config.json", "w") as f:
-        json.dump(config_dict, f, indent=2)
+        json.dump({
+            "lambda_pde": float(lambda_pde),
+            "seed": int(seed),
+            "epochs": int(epochs),
+            "batch_size": int(cfg_kwargs.get("batch_size", 200)),
+            "lr": float(cfg_kwargs.get("lr", 1e-3)),
+            "lambda_data": float(cfg_kwargs.get("lambda_data", 1.0)),
+            "lambda_reg": float(cfg_kwargs.get("lambda_reg", 1e-3)),
+            "lambda_tv": float(cfg_kwargs.get("lambda_tv", 0.0)),
+            "selected_derivs": list(selected_derivs),
+            "noise_level": float(data_kwargs.get("noise_level", 0.05)),
+            "train_stride_t": int(data_kwargs.get("train_stride_t", 1)),
+            "train_stride_x": int(data_kwargs.get("train_stride_x", 1)),
+            "train_noise_level": float(data_kwargs.get("train_noise_level", data_kwargs.get("noise_level", 0.05))),
+            "train_normalize": bool(data_kwargs.get("train_normalize", True)),
+        }, f, indent=2)
 
-    # Training loop with loss history
     loss_history = []
     for epoch in range(epochs):
         for batch in loader:
-            t_b, x_b, u_noisy_b, u_clean_b = batch
-            metrics = trainer.step(t_b, x_b, u_noisy_b, u_clean_b)
+            t_b, x_b, u_noisy_b = batch
+            metrics = trainer.step(t_b, x_b, u_noisy_b, u_noisy_b)
             loss_history.append(metrics)
 
-    # Save loss history
     if loss_history:
         with open(seed_dir / "loss_history.csv", "w", newline="") as f:
             fieldnames = list(loss_history[0].keys())
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             writer.writeheader()
             for entry in loss_history:
-                # Convert numpy arrays and tensors to lists
                 row = {}
                 for k, v in entry.items():
-                    if isinstance(v, (list, tuple)):
-                        row[k] = "|".join(map(str, v))
-                    else:
-                        row[k] = str(v)
+                    row[k] = "|".join(map(str, v)) if isinstance(v, (list, tuple)) else str(v)
                 writer.writerow(row)
 
-    # Extract PDE on full grid
+    t_s, x_s = np.meshgrid(t_s, x_s, indexing="ij")
     extraction = extract_pde_ls(u_model, t_s, x_s, selected_derivs, device=str(cfg.device))
-    save_pde_extraction(extraction, str(seed_dir), method_name="least_squares")
-    eql_products = v_model.product_coefficients(
-        feature_names=list(selected_derivs),
-        include_readout=True,
-    )
+    save_pde_extraction(extraction, seed_dir, method_name="least_squares")
+
+    eql_products = v_model.product_coefficients(feature_names=list(selected_derivs), include_readout=True)
     eql_readout_poly = eql_products.get(f"p{len(v_model.linears) - 1}", {}) if len(v_model.linears) > 0 else {}
     eql_terms_and_coeffs = sorted(
         ((monomial_to_term(monomial), float(coeff)) for monomial, coeff in eql_readout_poly.items()),
         key=lambda item: item[0],
     )
+
     feature_eval = evaluate_primitive_feature_metrics(
         u_model,
         t_s,
@@ -212,7 +208,6 @@ def run_single(
         device=str(cfg.device),
     )
 
-    # Prepare summary
     final_metrics = loss_history[-1] if loss_history else {}
     summary = {
         "lambda_pde": float(lambda_pde),
@@ -233,9 +228,10 @@ def run_single(
         "num_samples": int(len(t_s)),
     }
     summary.update(feature_eval["summary_flat"])
+
     with open(seed_dir / "summary.json", "w") as f:
         json.dump(summary, f, indent=2)
-
+ 
     return summary
 
 
@@ -302,13 +298,32 @@ def main(argv: Sequence[str] | None = None) -> int:
     p.add_argument("--out-dir", type=str, default="run_results/pde_lambda_sweep")
     p.add_argument("--device", type=str, default="cpu")
     p.add_argument("--noise", type=float, default=0.05)
+    p.add_argument("--stride-t", type=int, default=1, help="Stride over time indices inside PDETrainDataset.")
+    p.add_argument("--stride-x", type=int, default=1, help="Stride over space indices inside PDETrainDataset.")
+    p.add_argument(
+        "--train-noise",
+        type=float,
+        default=None,
+        help="Noise level applied inside PDETrainDataset; defaults to --noise when omitted.",
+    )
+    p.add_argument(
+        "--no-train-normalize",
+        action="store_true",
+        help="Disable affine normalization of training coordinates inside PDETrainDataset.",
+    )
 
     args = p.parse_args(argv)
 
     lambdas = parse_lambdas(args.lambdas)
     os.makedirs(args.out_dir, exist_ok=True)
 
-    data_kwargs = {"noise_level": float(args.noise)}
+    data_kwargs = {
+        "noise_level": float(args.noise),
+        "train_stride_t": int(args.stride_t),
+        "train_stride_x": int(args.stride_x),
+        "train_noise_level": float(args.train_noise) if args.train_noise is not None else float(args.noise),
+        "train_normalize": not bool(args.no_train_normalize),
+    }
     cfg_kwargs = {
         "batch_size": int(args.batch_size),
         "lr": float(args.lr),
