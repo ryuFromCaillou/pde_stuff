@@ -307,6 +307,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     p.add_argument("--num-seeds", type=int, default=1)
     p.add_argument("--batch-size", type=int, default=1024)
     p.add_argument("--lr", type=float, default=1e-3)
+    p.add_argument("--lambda-data", type=float, default=1.0, help="Weight in front of the data loss term.")
+    p.add_argument("--lambda-reg", type=float, default=1e-3, help="Weight in front of the L1 regularization term.")
+    p.add_argument("--lambda-tv", type=float, default=0.0, help="Weight in front of the TV loss term.")
     p.add_argument("--out-dir", type=str, default="run_results/pde_lambda_sweep")
     p.add_argument("--device", type=str, default="cpu")
     p.add_argument("--noise", type=float, default=0.05)
@@ -341,6 +344,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         "lr": float(args.lr),
         "epochs": int(args.epochs),
         "device": args.device,
+        "lambda_data": float(args.lambda_data),
+        "lambda_reg": float(args.lambda_reg),
+        "lambda_tv": float(args.lambda_tv),
     }
 
     for lam in lambdas:
