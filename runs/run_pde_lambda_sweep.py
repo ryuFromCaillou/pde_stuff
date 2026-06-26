@@ -118,6 +118,7 @@ def run_single(cfg_kwargs: dict, data_kwargs: dict, lambda_pde: float, seed: int
         seed=int(seed),
         normalize=bool(data_kwargs.get("train_normalize", True)),
     )
+    print(int(data_kwargs.get("train_stride_t", 1)))
     loader = DataLoader(dataset, batch_size=cfg_kwargs.get("batch_size", 200), shuffle=True)
     print(f"num_batches={len(loader)}")
     for batch in loader:
