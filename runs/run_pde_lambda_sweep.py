@@ -159,10 +159,26 @@ def run_single(cfg_kwargs: dict, data_kwargs: dict, lambda_pde: float, seed: int
 
     loss_history = []
     for epoch in range(epochs):
+        epoch_metrics = []
         for batch in loader:
             t_b, x_b, u_noisy_b = batch
             metrics = trainer.step(t_b, x_b, u_noisy_b, u_noisy_b)
             loss_history.append(metrics)
+            epoch_metrics.append(metrics)
+
+        if epoch_metrics:
+            epoch_summary = {
+                key: float(np.mean([m[key] for m in epoch_metrics]))
+                for key in ["loss", "loss_data", "loss_pde", "l1", "loss_tv"]
+            }
+            print(
+                f"epoch {epoch:05d}  "
+                f"loss={epoch_summary['loss']:.6e}  "
+                f"data={epoch_summary['loss_data']:.6e}  "
+                f"pde={epoch_summary['loss_pde']:.6e}  "
+                f"l1={epoch_summary['l1']:.6e}  "
+                f"tv={epoch_summary['loss_tv']:.6e}"
+            )
 
     if loss_history:
         with open(seed_dir / "loss_history.csv", "w", newline="") as f:
