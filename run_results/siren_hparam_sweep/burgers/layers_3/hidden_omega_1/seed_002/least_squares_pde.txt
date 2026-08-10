@@ -1,5 +1,0 @@
-u_t ~= -0.0051*u +0.0044*u_x +0.0206*u_xx -0.9907*u*u_x
-residual_rel_l2 = 4.969881e-01
-residual_rmse = 2.199874e-01
-coeff_error_l2 = 1.150723e-02
-condition_number = 1.807121e+01

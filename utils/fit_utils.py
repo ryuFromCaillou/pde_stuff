@@ -16,6 +16,7 @@ class FitHistoryRow:
     data_loss: float
     pde_loss: float
     tv_loss: float
+    param_l1_loss: float = 0.0
     l1_data_loss: float = 0.0
     l1_pde_loss: float = 0.0
     sparse_eql_loss: float = 0.0
@@ -215,6 +216,7 @@ def fit_data_and_pde(
     weight_decay: float = 0.0,
     lam_pde: float = 1.0,
     lam_data: float = 1.0,
+    lam_param_l1: float = 0.0,
     lam_l1_data: float = 0.0,
     lam_l1_pde: float = 0.0,
     lam_sparse_eql: float = 0.0,
@@ -263,6 +265,7 @@ def fit_data_and_pde(
         epoch_data = 0.0
         epoch_pde = 0.0
         epoch_tv = 0.0
+        epoch_param_l1 = 0.0
         epoch_l1_data = 0.0
         epoch_l1_pde = 0.0
         epoch_sparse_eql = 0.0
@@ -283,6 +286,9 @@ def fit_data_and_pde(
 
             loss_data = lam_data * loss_fn(u_pred, y_b)
             loss_pde = lam_pde * loss_fn(u_t, v_pred)
+            loss_param_l1 = u_pred.new_tensor(0.0)
+            if float(lam_param_l1) != 0.0:
+                loss_param_l1 = float(lam_param_l1) * sum(p.abs().sum() for p in v_model.parameters())
             loss_l1_data = float(lam_l1_data) * l1_fn(u_pred, y_b)
             loss_l1_pde = float(lam_l1_pde) * l1_fn(u_t, v_pred)
             loss_sparse_eql = float(lam_sparse_eql) * _smooth_l1_param_sparsity(
@@ -295,7 +301,7 @@ def fit_data_and_pde(
                     if float(lam_tv) != 0.0:
                         loss_tv = loss_tv + float(lam_tv) * tv_fn(u_pred, t_b, x_b)
 
-            loss = loss_data + loss_pde + loss_l1_data + loss_l1_pde + loss_sparse_eql + loss_tv
+            loss = loss_data + loss_pde + loss_param_l1 + loss_l1_data + loss_l1_pde + loss_sparse_eql + loss_tv
 
             opt.zero_grad(set_to_none=True)
             loss.backward()
@@ -306,6 +312,7 @@ def fit_data_and_pde(
             epoch_data += float(loss_data.detach().cpu()) * bs
             epoch_pde += float(loss_pde.detach().cpu()) * bs
             epoch_tv += float(loss_tv.detach().cpu()) * bs
+            epoch_param_l1 += float(loss_param_l1.detach().cpu()) * bs
             epoch_l1_data += float(loss_l1_data.detach().cpu()) * bs
             epoch_l1_pde += float(loss_l1_pde.detach().cpu()) * bs
             epoch_sparse_eql += float(loss_sparse_eql.detach().cpu()) * bs
@@ -315,6 +322,7 @@ def fit_data_and_pde(
         epoch_data /= max(1, n_items)
         epoch_pde /= max(1, n_items)
         epoch_tv /= max(1, n_items)
+        epoch_param_l1 /= max(1, n_items)
         epoch_l1_data /= max(1, n_items)
         epoch_l1_pde /= max(1, n_items)
         epoch_sparse_eql /= max(1, n_items)
@@ -327,6 +335,7 @@ def fit_data_and_pde(
                 data_loss=float(epoch_data),
                 pde_loss=float(epoch_pde),
                 tv_loss=float(epoch_tv),
+                param_l1_loss=float(epoch_param_l1),
                 l1_data_loss=float(epoch_l1_data),
                 l1_pde_loss=float(epoch_l1_pde),
                 sparse_eql_loss=float(epoch_sparse_eql),
@@ -347,6 +356,8 @@ def fit_data_and_pde(
                     + f"  l1_data={epoch_l1_data:.6e}"
                     + f"  l1_pde={epoch_l1_pde:.6e}"
                 )
+            if float(lam_param_l1) != 0.0:
+                msg = msg + f"  param_l1={epoch_param_l1:.6e}"
             if float(lam_sparse_eql) != 0.0:
                 msg = msg + f"  sparse_eql={epoch_sparse_eql:.6e}"
             print(msg)
