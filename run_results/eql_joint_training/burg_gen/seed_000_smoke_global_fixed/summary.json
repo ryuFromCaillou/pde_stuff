@@ -1,0 +1,348 @@
+{
+  "dataset": "burg_gen",
+  "seed": 0,
+  "device": "cpu",
+  "num_samples": 16128,
+  "grid_shape": [
+    252,
+    256
+  ],
+  "config": {
+    "dataset_name": "burg_gen",
+    "noise_level": 0.0,
+    "seed": 0,
+    "stride_t": 2,
+    "stride_x": 2,
+    "device": "cpu",
+    "pretrain_epochs": 1,
+    "pretrain_lr": 0.001,
+    "epochs": 1,
+    "joint_lr": 0.001,
+    "batch_size": 1024,
+    "weight_decay": 0.0,
+    "lam_pde": 0.5,
+    "lam_data": 1.0,
+    "lam_sparse_eql": 1e-05,
+    "sparse_eql_s": 0.001,
+    "tv_type": "tv_ux",
+    "tv_lambda": 1e-06,
+    "hidden_size": 64,
+    "hidden_layers": 3,
+    "first_omega_0": 20.0,
+    "hidden_omega_0": 1.0,
+    "eql_prod_dim": 2,
+    "eql_num_layers": 2,
+    "feature_terms": [
+      "u",
+      "u_x",
+      "u_xx"
+    ],
+    "feature_normalize": true,
+    "feature_normalize_mode": "global_fixed",
+    "max_time_slices": 5,
+    "log_every": 1,
+    "output_root": null,
+    "output_tag": "smoke_global_fixed"
+  },
+  "final_total_loss": 2.442444772947402,
+  "final_data_loss": 0.12695192155383883,
+  "final_pde_loss": 2.3154109574499584,
+  "final_tv_loss": 4.550496317004593e-05,
+  "final_sparse_eql_loss": 3.638958820836648e-05,
+  "final_raw_data_mse": 0.12695192155383883,
+  "final_weighted_data_contribution": 0.12695192155383883,
+  "final_raw_pde_mse": 4.630821914899917,
+  "final_weighted_pde_contribution": 2.3154109574499584,
+  "min_total_loss": 2.442444772947402,
+  "min_total_loss_epoch": 0,
+  "data_mse_full_grid": 0.12898629419394136,
+  "runtime_seconds": 1.9798109508119524,
+  "final_5_epochs": [
+    {
+      "epoch": 0,
+      "total_loss": 2.442444772947402,
+      "data_loss": 0.12695192155383883,
+      "pde_loss": 2.3154109574499584,
+      "tv_loss": 4.550496317004593e-05,
+      "param_l1_loss": 0.0,
+      "l1_data_loss": 0.0,
+      "l1_pde_loss": 0.0,
+      "sparse_eql_loss": 3.638958820836648e-05,
+      "raw_data_mse": 0.12695192155383883,
+      "weighted_data_contribution": 0.12695192155383883,
+      "raw_pde_mse": 4.630821914899917,
+      "weighted_pde_contribution": 2.3154109574499584,
+      "tv_loss_weighted": 4.550496317004593e-05,
+      "sparse_eql_loss_weighted": 3.638958820836648e-05
+    }
+  ],
+  "pde_diagnostics": {
+    "feature_scales_full_grid": {
+      "u": 108.81082153320312,
+      "u_x": 845.6831665039062,
+      "u_xx": 49179.58984375
+    },
+    "feature_normalization_mode": "global_fixed",
+    "u_t_abs_stats": {
+      "mean": 0.882989764213562,
+      "std": 0.6759545207023621,
+      "max": 5.721975803375244
+    },
+    "u_abs_stats": {
+      "mean": 0.5593451857566833,
+      "std": 0.25243818759918213,
+      "max": 1.4337211847305298
+    },
+    "u_x_abs_stats": {
+      "mean": 2.508756637573242,
+      "std": 1.9082810878753662,
+      "max": 10.487123489379883
+    },
+    "u_xx_abs_stats": {
+      "mean": 37.919071197509766,
+      "std": 32.52861022949219,
+      "max": 211.18626403808594
+    },
+    "v_pred_abs_stats": {
+      "mean": 0.0008071968331933022,
+      "std": 0.0006081486353650689,
+      "max": 0.003323411801829934
+    },
+    "pde_residual_stats": {
+      "mean": 0.029461732134222984,
+      "std": 1.1116600036621094,
+      "max_abs": 5.721065044403076
+    },
+    "readout_base_weights": {
+      "u": -0.025099998340010643,
+      "u_x": 0.2711915969848633,
+      "u_xx": -0.010612026788294315
+    }
+  },
+  "feature_normalization": {
+    "enabled": true,
+    "mode": "global_fixed",
+    "training_dataset_l2_scales": {
+      "u": 108.81081993510035,
+      "u_x": 845.6831742469234,
+      "u_xx": 49179.591254171566
+    },
+    "training_dataset_scale_metadata": {
+      "feature_names": [
+        "u",
+        "u_x",
+        "u_xx"
+      ],
+      "scales_by_name": {
+        "u": 108.81081993510035,
+        "u_x": 845.6831742469234,
+        "u_xx": 49179.591254171566
+      },
+      "values_shape": [
+        16128,
+        3
+      ],
+      "derivative_mode": "periodic"
+    }
+  },
+  "feature_metrics": {
+    "feature_names": [
+      "u",
+      "u_x",
+      "u_xx"
+    ],
+    "feature_keys": [
+      "u",
+      "ux",
+      "uxx"
+    ],
+    "metrics_by_name": {
+      "u": {
+        "rel_l2": 0.41929259960173565,
+        "rmse": 0.35914661935474396,
+        "max_abs": 1.1169815676803743
+      },
+      "u_x": {
+        "rel_l2": 0.9430292067685393,
+        "rmse": 6.901155337901221,
+        "max_abs": 85.71904917569263
+      },
+      "u_xx": {
+        "rel_l2": 1.0026030864207403,
+        "rmse": 498.30984189766434,
+        "max_abs": 7419.548500204471
+      }
+    },
+    "summary_flat": {
+      "u_rel_l2": 0.41929259960173565,
+      "u_rmse": 0.35914661935474396,
+      "u_max_abs": 1.1169815676803743,
+      "ux_rel_l2": 0.9430292067685393,
+      "ux_rmse": 6.901155337901221,
+      "ux_max_abs": 85.71904917569263,
+      "uxx_rel_l2": 1.0026030864207403,
+      "uxx_rmse": 498.30984189766434,
+      "uxx_max_abs": 7419.548500204471
+    }
+  },
+  "eql_product_coefficients": {
+    "p0": {
+      "u * u": -0.19044211412260914,
+      "u * u_x": -0.14278000036934735,
+      "u * u_xx": -0.28306696219883776,
+      "u_x * u": 0.013311448592240316,
+      "u_x * u_x": 0.009979980760416174,
+      "u_x * u_xx": 0.01978570408562863,
+      "u_xx * u": 0.040722129927712514,
+      "u_xx * u_x": 0.030530567006707754,
+      "u_xx * u_xx": 0.06052804898753994
+    },
+    "p1": {
+      "u * u * u": 0.01800855346074984,
+      "u * u * u_x": 0.019228842942474032,
+      "u * u * u_xx": 0.035483409232511524,
+      "u * u_x * u": 0.013501537102879784,
+      "u * u_x * u_x": 0.01441642367328993,
+      "u * u_x * u_xx": 0.02660294550217991,
+      "u * u_xx * u": 0.026767327936970415,
+      "u * u_xx * u_x": 0.028581126519212963,
+      "u * u_xx * u_xx": 0.052741384993440346,
+      "u_x * u * u": -0.0012587548437896887,
+      "u_x * u * u_x": -0.001344050161889157,
+      "u_x * u * u_xx": -0.0024802054947358266,
+      "u_x * u_x * u": -0.00094372517281288,
+      "u_x * u_x * u_x": -0.001007673557369801,
+      "u_x * u_x * u_xx": -0.0018594823056125554,
+      "u_x * u_xx * u": -0.0018709722449059844,
+      "u_x * u_xx * u_x": -0.0019977524305568096,
+      "u_x * u_xx * u_xx": -0.003686496751300176,
+      "u_xx * u * u": -0.0038507588367070614,
+      "u_xx * u * u_x": -0.004111692648816502,
+      "u_xx * u * u_xx": -0.0075873973973752664,
+      "u_xx * u_x * u": -0.0028870260691042635,
+      "u_xx * u_x * u_x": -0.003082655748815628,
+      "u_xx * u_x * u_xx": -0.005688492843038722,
+      "u_xx * u_xx * u": -0.005723642646422352,
+      "u_xx * u_xx * u_x": -0.006111486174987828,
+      "u_xx * u_xx * u_xx": -0.011277660627562873
+    }
+  },
+  "eql_coefficient_recovery": {
+    "normalized_feature_definition": {
+      "u": "u_norm = u / s_u",
+      "u_x": "u_x_norm = u_x / s_ux",
+      "u_xx": "u_xx_norm = u_xx / s_uxx"
+    },
+    "scale_values": {
+      "u": 108.81082153320312,
+      "u_x": 845.6831665039062,
+      "u_xx": 49179.58984375
+    },
+    "derivation": {
+      "general_rule": "For any monomial m = prod_j f_j^a_j with normalized inputs z_j = f_j / s_j, c_raw(m) = c_norm(m) / prod_j s_j^a_j.",
+      "linear_terms": {
+        "u": "c_raw(u) = c_norm(u) / s_u",
+        "u_x": "c_raw(u_x) = c_norm(u_x) / s_ux",
+        "u_xx": "c_raw(u_xx) = c_norm(u_xx) / s_uxx"
+      },
+      "product_terms": {
+        "u * u * u": "c_raw(u * u * u) = c_norm(u * u * u) / (s_u s_u s_u)",
+        "u * u * u_x": "c_raw(u * u * u_x) = c_norm(u * u * u_x) / (s_u s_u s_ux)",
+        "u * u * u_xx": "c_raw(u * u * u_xx) = c_norm(u * u * u_xx) / (s_u s_u s_uxx)",
+        "u * u_x * u": "c_raw(u * u_x * u) = c_norm(u * u_x * u) / (s_u s_ux s_u)",
+        "u * u_x * u_x": "c_raw(u * u_x * u_x) = c_norm(u * u_x * u_x) / (s_u s_ux s_ux)",
+        "u * u_x * u_xx": "c_raw(u * u_x * u_xx) = c_norm(u * u_x * u_xx) / (s_u s_ux s_uxx)",
+        "u * u_xx * u": "c_raw(u * u_xx * u) = c_norm(u * u_xx * u) / (s_u s_uxx s_u)",
+        "u * u_xx * u_x": "c_raw(u * u_xx * u_x) = c_norm(u * u_xx * u_x) / (s_u s_uxx s_ux)",
+        "u * u_xx * u_xx": "c_raw(u * u_xx * u_xx) = c_norm(u * u_xx * u_xx) / (s_u s_uxx s_uxx)",
+        "u_x * u * u": "c_raw(u_x * u * u) = c_norm(u_x * u * u) / (s_ux s_u s_u)",
+        "u_x * u * u_x": "c_raw(u_x * u * u_x) = c_norm(u_x * u * u_x) / (s_ux s_u s_ux)",
+        "u_x * u * u_xx": "c_raw(u_x * u * u_xx) = c_norm(u_x * u * u_xx) / (s_ux s_u s_uxx)",
+        "u_x * u_x * u": "c_raw(u_x * u_x * u) = c_norm(u_x * u_x * u) / (s_ux s_ux s_u)",
+        "u_x * u_x * u_x": "c_raw(u_x * u_x * u_x) = c_norm(u_x * u_x * u_x) / (s_ux s_ux s_ux)",
+        "u_x * u_x * u_xx": "c_raw(u_x * u_x * u_xx) = c_norm(u_x * u_x * u_xx) / (s_ux s_ux s_uxx)",
+        "u_x * u_xx * u": "c_raw(u_x * u_xx * u) = c_norm(u_x * u_xx * u) / (s_ux s_uxx s_u)",
+        "u_x * u_xx * u_x": "c_raw(u_x * u_xx * u_x) = c_norm(u_x * u_xx * u_x) / (s_ux s_uxx s_ux)",
+        "u_x * u_xx * u_xx": "c_raw(u_x * u_xx * u_xx) = c_norm(u_x * u_xx * u_xx) / (s_ux s_uxx s_uxx)",
+        "u_xx * u * u": "c_raw(u_xx * u * u) = c_norm(u_xx * u * u) / (s_uxx s_u s_u)",
+        "u_xx * u * u_x": "c_raw(u_xx * u * u_x) = c_norm(u_xx * u * u_x) / (s_uxx s_u s_ux)",
+        "u_xx * u * u_xx": "c_raw(u_xx * u * u_xx) = c_norm(u_xx * u * u_xx) / (s_uxx s_u s_uxx)",
+        "u_xx * u_x * u": "c_raw(u_xx * u_x * u) = c_norm(u_xx * u_x * u) / (s_uxx s_ux s_u)",
+        "u_xx * u_x * u_x": "c_raw(u_xx * u_x * u_x) = c_norm(u_xx * u_x * u_x) / (s_uxx s_ux s_ux)",
+        "u_xx * u_x * u_xx": "c_raw(u_xx * u_x * u_xx) = c_norm(u_xx * u_x * u_xx) / (s_uxx s_ux s_uxx)",
+        "u_xx * u_xx * u": "c_raw(u_xx * u_xx * u) = c_norm(u_xx * u_xx * u) / (s_uxx s_uxx s_u)",
+        "u_xx * u_xx * u_x": "c_raw(u_xx * u_xx * u_x) = c_norm(u_xx * u_xx * u_x) / (s_uxx s_uxx s_ux)",
+        "u_xx * u_xx * u_xx": "c_raw(u_xx * u_xx * u_xx) = c_norm(u_xx * u_xx * u_xx) / (s_uxx s_uxx s_uxx)"
+      }
+    },
+    "normalized_basis_coefficients": {
+      "u": -0.025099998340010643,
+      "u_x": 0.2711915969848633,
+      "u_xx": -0.010612026788294315,
+      "u * u * u": 0.01800855346074984,
+      "u * u * u_x": 0.019228842942474032,
+      "u * u * u_xx": 0.035483409232511524,
+      "u * u_x * u": 0.013501537102879784,
+      "u * u_x * u_x": 0.01441642367328993,
+      "u * u_x * u_xx": 0.02660294550217991,
+      "u * u_xx * u": 0.026767327936970415,
+      "u * u_xx * u_x": 0.028581126519212963,
+      "u * u_xx * u_xx": 0.052741384993440346,
+      "u_x * u * u": -0.0012587548437896887,
+      "u_x * u * u_x": -0.001344050161889157,
+      "u_x * u * u_xx": -0.0024802054947358266,
+      "u_x * u_x * u": -0.00094372517281288,
+      "u_x * u_x * u_x": -0.001007673557369801,
+      "u_x * u_x * u_xx": -0.0018594823056125554,
+      "u_x * u_xx * u": -0.0018709722449059844,
+      "u_x * u_xx * u_x": -0.0019977524305568096,
+      "u_x * u_xx * u_xx": -0.003686496751300176,
+      "u_xx * u * u": -0.0038507588367070614,
+      "u_xx * u * u_x": -0.004111692648816502,
+      "u_xx * u * u_xx": -0.0075873973973752664,
+      "u_xx * u_x * u": -0.0028870260691042635,
+      "u_xx * u_x * u_x": -0.003082655748815628,
+      "u_xx * u_x * u_xx": -0.005688492843038722,
+      "u_xx * u_xx * u": -0.005723642646422352,
+      "u_xx * u_xx * u_x": -0.006111486174987828,
+      "u_xx * u_xx * u_xx": -0.011277660627562873
+    },
+    "raw_basis_coefficients": {
+      "u": -0.00023067557055758,
+      "u_x": 0.0003206775394453954,
+      "u_xx": -2.1578111615021832e-07,
+      "u * u * u": 1.3978564078334513e-08,
+      "u * u * u_x": 1.9204424080960646e-09,
+      "u * u * u_xx": 6.093913130874026e-11,
+      "u * u_x * u": 1.3484391392879479e-09,
+      "u * u_x * u_x": 1.8525505862499662e-10,
+      "u * u_x * u_xx": 5.87848002916645e-12,
+      "u * u_xx * u": 4.597015188835327e-11,
+      "u * u_xx * u_x": 6.315600708218778e-12,
+      "u * u_xx * u_xx": 2.0040549991461405e-13,
+      "u_x * u * u": -1.2571563409415578e-10,
+      "u_x * u * u_x": -1.7271418846897015e-11,
+      "u_x * u * u_xx": -5.480535404562154e-13,
+      "u_x * u_x * u": -1.2127131262051606e-11,
+      "u_x * u_x * u_x": -1.666083657354189e-12,
+      "u_x * u_x * u_xx": -5.2867865414152214e-14,
+      "u_x * u_xx * u": -4.1343064721548626e-13,
+      "u_x * u_xx * u_x": -5.6799092043352515e-14,
+      "u_x * u_xx * u_xx": -1.8023385203613676e-15,
+      "u_xx * u * u": -6.613285010206277e-12,
+      "u_xx * u * u_x": -9.08564922638274e-13,
+      "u_xx * u * u_xx": -2.8830417871296885e-14,
+      "u_xx * u_x * u": -6.379490981373345e-13,
+      "u_xx * u_x * u_x": -8.764451737703421e-14,
+      "u_xx * u_x * u_xx": -2.7811199806951392e-15,
+      "u_xx * u_xx * u": -2.174856549617609e-14,
+      "u_xx * u_xx * u_x": -2.987922597775704e-15,
+      "u_xx * u_xx * u_xx": -9.481221970448061e-17
+    }
+  },
+  "feature_overlay_files": [
+    "run_results/eql_joint_training/burg_gen/seed_000_smoke_global_fixed/feature_overlays/u_overlay.pdf",
+    "run_results/eql_joint_training/burg_gen/seed_000_smoke_global_fixed/feature_overlays/ux_overlay.pdf",
+    "run_results/eql_joint_training/burg_gen/seed_000_smoke_global_fixed/feature_overlays/uxx_overlay.pdf"
+  ]
+}

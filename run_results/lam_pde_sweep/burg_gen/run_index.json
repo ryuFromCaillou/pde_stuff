@@ -1,0 +1,27 @@
+[
+  {
+    "lam_pde": 0.5,
+    "run_dir": "run_results/lam_pde_sweep/burg_gen/lam_pde_0p5/seed_000",
+    "summary_file": "run_results/lam_pde_sweep/burg_gen/lam_pde_0p5/seed_000/summary.json"
+  },
+  {
+    "lam_pde": 0.1,
+    "run_dir": "run_results/lam_pde_sweep/burg_gen/lam_pde_0p1/seed_000",
+    "summary_file": "run_results/lam_pde_sweep/burg_gen/lam_pde_0p1/seed_000/summary.json"
+  },
+  {
+    "lam_pde": 0.01,
+    "run_dir": "run_results/lam_pde_sweep/burg_gen/lam_pde_0p01/seed_000",
+    "summary_file": "run_results/lam_pde_sweep/burg_gen/lam_pde_0p01/seed_000/summary.json"
+  },
+  {
+    "lam_pde": 0.001,
+    "run_dir": "run_results/lam_pde_sweep/burg_gen/lam_pde_0p001/seed_000",
+    "summary_file": "run_results/lam_pde_sweep/burg_gen/lam_pde_0p001/seed_000/summary.json"
+  },
+  {
+    "lam_pde": 0.0001,
+    "run_dir": "run_results/lam_pde_sweep/burg_gen/lam_pde_0p0001/seed_000",
+    "summary_file": "run_results/lam_pde_sweep/burg_gen/lam_pde_0p0001/seed_000/summary.json"
+  }
+]

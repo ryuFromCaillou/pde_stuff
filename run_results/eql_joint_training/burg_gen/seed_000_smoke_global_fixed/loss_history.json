@@ -1,0 +1,19 @@
+[
+  {
+    "epoch": 0,
+    "total_loss": 2.442444772947402,
+    "data_loss": 0.12695192155383883,
+    "pde_loss": 2.3154109574499584,
+    "tv_loss": 4.550496317004593e-05,
+    "param_l1_loss": 0.0,
+    "l1_data_loss": 0.0,
+    "l1_pde_loss": 0.0,
+    "sparse_eql_loss": 3.638958820836648e-05,
+    "raw_data_mse": 0.12695192155383883,
+    "weighted_data_contribution": 0.12695192155383883,
+    "raw_pde_mse": 4.630821914899917,
+    "weighted_pde_contribution": 2.3154109574499584,
+    "tv_loss_weighted": 4.550496317004593e-05,
+    "sparse_eql_loss_weighted": 3.638958820836648e-05
+  }
+]

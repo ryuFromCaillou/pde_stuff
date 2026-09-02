@@ -1,0 +1,139 @@
+{
+  "dataset": "burg_gen",
+  "seed": 0,
+  "device": "cpu",
+  "num_samples": 16128,
+  "grid_shape": [
+    252,
+    256
+  ],
+  "config": {
+    "dataset_name": "burg_gen",
+    "noise_level": 0.0,
+    "seed": 0,
+    "stride_t": 2,
+    "stride_x": 2,
+    "device": "cpu",
+    "pretrain_epochs": 150,
+    "pretrain_lr": 0.001,
+    "epochs": 600,
+    "joint_lr": 0.001,
+    "batch_size": 1024,
+    "weight_decay": 0.0,
+    "lam_pde": 0.5,
+    "lam_data": 1.0,
+    "lam_param_l1": 1e-06,
+    "lam_l1_data": 0.0,
+    "lam_l1_pde": 0.0,
+    "lam_sparse_eql": 1e-05,
+    "sparse_eql_s": 0.001,
+    "tv_type": "tv_ux",
+    "tv_lambda": 1e-06,
+    "hidden_size": 64,
+    "hidden_layers": 3,
+    "first_omega_0": 20.0,
+    "hidden_omega_0": 1.0,
+    "eql_prod_dim": 2,
+    "eql_num_layers": 2,
+    "feature_terms": [
+      "u",
+      "u_x",
+      "u_xx"
+    ],
+    "max_time_slices": 5,
+    "log_every": 50
+  },
+  "final_total_loss": 45646926.28571428,
+  "final_data_loss": 0.20504223259668503,
+  "final_pde_loss": 45646926.28571428,
+  "final_tv_loss": 3.9559234296792144e-05,
+  "min_total_loss": 45646926.28571428,
+  "data_mse_full_grid": 0.2036153087524921,
+  "feature_metrics": {
+    "feature_names": [
+      "u",
+      "u_x",
+      "u_xx"
+    ],
+    "feature_keys": [
+      "u",
+      "ux",
+      "uxx"
+    ],
+    "metrics_by_name": {
+      "u": {
+        "rel_l2": 0.5268058974294643,
+        "rmse": 0.4512375303013836,
+        "max_abs": 2.5072787158904113
+      },
+      "u_x": {
+        "rel_l2": 0.9254185898567413,
+        "rmse": 6.772279580891483,
+        "max_abs": 93.30657216777595
+      },
+      "u_xx": {
+        "rel_l2": 1.0023432825918397,
+        "rmse": 498.18071522065986,
+        "max_abs": 7411.623492046959
+      }
+    },
+    "summary_flat": {
+      "u_rel_l2": 0.5268058974294643,
+      "u_rmse": 0.4512375303013836,
+      "u_max_abs": 2.5072787158904113,
+      "ux_rel_l2": 0.9254185898567413,
+      "ux_rmse": 6.772279580891483,
+      "ux_max_abs": 93.30657216777595,
+      "uxx_rel_l2": 1.0023432825918397,
+      "uxx_rmse": 498.18071522065986,
+      "uxx_max_abs": 7411.623492046959
+    }
+  },
+  "eql_product_coefficients": {
+    "p0": {
+      "u * u": -0.207448949685201,
+      "u * u_x": -0.1435118317362214,
+      "u * u_xx": -0.27640171869967034,
+      "u_x * u": 0.018224094901689192,
+      "u_x * u_x": 0.012607310111933168,
+      "u_x * u_xx": 0.02428149749717501,
+      "u_xx * u": 0.04539532156793591,
+      "u_xx * u_x": 0.03140418768258546,
+      "u_xx * u_xx": 0.0604840126756101
+    },
+    "p1": {
+      "u * u * u": 0.02306567092842381,
+      "u * u * u_x": 0.02161610860613622,
+      "u * u * u_xx": 0.038679334149215164,
+      "u * u_x * u": 0.015956680861417515,
+      "u * u_x * u_x": 0.014953883091638573,
+      "u * u_x * u_xx": 0.026758111345054656,
+      "u * u_xx * u": 0.0307323372678043,
+      "u * u_xx * u_x": 0.02880096322204234,
+      "u * u_xx * u_xx": 0.05153573663894333,
+      "u_x * u * u": -0.002026286354346946,
+      "u_x * u * u_x": -0.0018989443679576722,
+      "u_x * u * u_xx": -0.0033979244403941696,
+      "u_x * u_x * u": -0.0014017716974499834,
+      "u_x * u_x * u_x": -0.001313677340976327,
+      "u_x * u_x * u_xx": -0.0023506619883216008,
+      "u_x * u_xx * u": -0.0026997920778537416,
+      "u_x * u_xx * u_x": -0.0025301236174733116,
+      "u_x * u_xx * u_xx": -0.004527341096504786,
+      "u_xx * u * u": -0.005047379370032481,
+      "u_xx * u * u_x": -0.004730176762582001,
+      "u_xx * u * u_xx": -0.008464062191694611,
+      "u_xx * u_x * u": -0.0034917441614439318,
+      "u_xx * u_x * u_x": -0.0032723054643774823,
+      "u_xx * u_x * u_xx": -0.005855383075704451,
+      "u_xx * u_xx * u": -0.006725048909253461,
+      "u_xx * u_xx * u_x": -0.006302413142678721,
+      "u_xx * u_xx * u_xx": -0.011277383378008892
+    }
+  },
+  "feature_overlay_files": [
+    "run_results/eql_joint_training/burg_gen/seed_000/feature_overlays/u_overlay.pdf",
+    "run_results/eql_joint_training/burg_gen/seed_000/feature_overlays/ux_overlay.pdf",
+    "run_results/eql_joint_training/burg_gen/seed_000/feature_overlays/uxx_overlay.pdf"
+  ]
+}

@@ -1,0 +1,139 @@
+{
+  "dataset": "burgers",
+  "seed": 0,
+  "device": "cpu",
+  "num_samples": 6528,
+  "grid_shape": [
+    101,
+    256
+  ],
+  "config": {
+    "dataset_name": "burgers",
+    "noise_level": 0.0,
+    "seed": 0,
+    "stride_t": 2,
+    "stride_x": 2,
+    "device": "cpu",
+    "pretrain_epochs": 150,
+    "pretrain_lr": 0.001,
+    "epochs": 600,
+    "joint_lr": 0.001,
+    "batch_size": 1024,
+    "weight_decay": 0.0,
+    "lam_pde": 0.5,
+    "lam_data": 1.0,
+    "lam_param_l1": 1e-06,
+    "lam_l1_data": 0.0,
+    "lam_l1_pde": 0.0,
+    "lam_sparse_eql": 1e-05,
+    "sparse_eql_s": 0.001,
+    "tv_type": "tv_ux",
+    "tv_lambda": 1e-06,
+    "hidden_size": 64,
+    "hidden_layers": 3,
+    "first_omega_0": 20.0,
+    "hidden_omega_0": 1.0,
+    "eql_prod_dim": 2,
+    "eql_num_layers": 2,
+    "feature_terms": [
+      "u",
+      "u_x",
+      "u_xx"
+    ],
+    "max_time_slices": 5,
+    "log_every": 50
+  },
+  "final_total_loss": 0.9727028958937701,
+  "final_data_loss": 0.020697609393620024,
+  "final_pde_loss": 0.9519558502178566,
+  "final_tv_loss": 3.624864588988096e-06,
+  "min_total_loss": 0.9727028958937701,
+  "data_mse_full_grid": 0.020580274698552427,
+  "feature_metrics": {
+    "feature_names": [
+      "u",
+      "u_x",
+      "u_xx"
+    ],
+    "feature_keys": [
+      "u",
+      "ux",
+      "uxx"
+    ],
+    "metrics_by_name": {
+      "u": {
+        "rel_l2": 0.6749312867328867,
+        "rmse": 0.1434582681428729,
+        "max_abs": 0.8024498373270035
+      },
+      "u_x": {
+        "rel_l2": 0.9272928358292607,
+        "rmse": 1.1435483659956573,
+        "max_abs": 8.055949904525008
+      },
+      "u_xx": {
+        "rel_l2": 1.0086568210354616,
+        "rmse": 17.92883529248495,
+        "max_abs": 145.1485258838147
+      }
+    },
+    "summary_flat": {
+      "u_rel_l2": 0.6749312867328867,
+      "u_rmse": 0.1434582681428729,
+      "u_max_abs": 0.8024498373270035,
+      "ux_rel_l2": 0.9272928358292607,
+      "ux_rmse": 1.1435483659956573,
+      "ux_max_abs": 8.055949904525008,
+      "uxx_rel_l2": 1.0086568210354616,
+      "uxx_rmse": 17.92883529248495,
+      "uxx_max_abs": 145.1485258838147
+    }
+  },
+  "eql_product_coefficients": {
+    "p0": {
+      "u * u": -0.20685602080235554,
+      "u * u_x": -0.1464881304160155,
+      "u * u_xx": -0.2824497041271137,
+      "u_x * u": 0.017440930311843683,
+      "u_x * u_x": 0.0123510510556476,
+      "u_x * u_xx": 0.023814562356822444,
+      "u_xx * u": 0.043700948304218556,
+      "u_xx * u_x": 0.030947468628957697,
+      "u_xx * u_xx": 0.059671069136510546
+    },
+    "p1": {
+      "u * u * u": 0.0220866589256307,
+      "u * u * u_x": 0.021438904322326195,
+      "u * u * u_xx": 0.03839737032949593,
+      "u * u_x * u": 0.015640992032053047,
+      "u * u_x * u_x": 0.015182275092423298,
+      "u * u_x * u_xx": 0.027191661961986236,
+      "u * u_xx * u": 0.030158030955557406,
+      "u * u_xx * u_x": 0.029273560223979606,
+      "u * u_xx * u_xx": 0.05242934600964653,
+      "u_x * u * u": -0.0018622222241790254,
+      "u_x * u * u_x": -0.001807607217801212,
+      "u_x * u * u_xx": -0.00323744920489724,
+      "u_x * u_x * u": -0.0013187600292272137,
+      "u_x * u_x * u_x": -0.0012800836100158588,
+      "u_x * u_x * u_xx": -0.002292647221495871,
+      "u_x * u_xx * u": -0.002542754686076373,
+      "u_x * u_xx * u_x": -0.0024681811139246933,
+      "u_x * u_xx * u_xx": -0.004420546071141344,
+      "u_xx * u * u": -0.004666085793287692,
+      "u_xx * u * u_x": -0.004529239448071197,
+      "u_xx * u * u_xx": -0.008111929685578332,
+      "u_xx * u_x * u": -0.0033043572121719024,
+      "u_xx * u_x * u_x": -0.0032074474621570227,
+      "u_xx * u_x * u_xx": -0.005744582193437489,
+      "u_xx * u_xx * u": -0.006371265127472807,
+      "u_xx * u_xx * u_x": -0.006184409508925416,
+      "u_xx * u_xx * u_xx": -0.011076361861280954
+    }
+  },
+  "feature_overlay_files": [
+    "run_results/eql_joint_training/burgers/seed_000/feature_overlays/u_overlay.pdf",
+    "run_results/eql_joint_training/burgers/seed_000/feature_overlays/ux_overlay.pdf",
+    "run_results/eql_joint_training/burgers/seed_000/feature_overlays/uxx_overlay.pdf"
+  ]
+}

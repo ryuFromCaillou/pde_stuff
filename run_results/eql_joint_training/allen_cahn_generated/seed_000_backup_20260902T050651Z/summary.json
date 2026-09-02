@@ -1,0 +1,139 @@
+{
+  "dataset": "Allen_Cahn_generated",
+  "seed": 0,
+  "device": "cpu",
+  "num_samples": 5151,
+  "grid_shape": [
+    101,
+    201
+  ],
+  "config": {
+    "dataset_name": "Allen_Cahn_generated",
+    "noise_level": 0.0,
+    "seed": 0,
+    "stride_t": 2,
+    "stride_x": 2,
+    "device": "cpu",
+    "pretrain_epochs": 150,
+    "pretrain_lr": 0.001,
+    "epochs": 600,
+    "joint_lr": 0.001,
+    "batch_size": 1024,
+    "weight_decay": 0.0,
+    "lam_pde": 0.5,
+    "lam_data": 1.0,
+    "lam_param_l1": 1e-06,
+    "lam_l1_data": 0.0,
+    "lam_l1_pde": 0.0,
+    "lam_sparse_eql": 1e-05,
+    "sparse_eql_s": 0.001,
+    "tv_type": "tv_ux",
+    "tv_lambda": 1e-06,
+    "hidden_size": 64,
+    "hidden_layers": 3,
+    "first_omega_0": 20.0,
+    "hidden_omega_0": 1.0,
+    "eql_prod_dim": 2,
+    "eql_num_layers": 2,
+    "feature_terms": [
+      "u",
+      "u_x",
+      "u_xx"
+    ],
+    "max_time_slices": 5,
+    "log_every": 50
+  },
+  "final_total_loss": 6985.232082419524,
+  "final_data_loss": 0.12852007374991908,
+  "final_pde_loss": 6985.103564254058,
+  "final_tv_loss": 1.3065446915311136e-05,
+  "min_total_loss": 6985.232082419524,
+  "data_mse_full_grid": 0.1284918895236036,
+  "feature_metrics": {
+    "feature_names": [
+      "u",
+      "u_x",
+      "u_xx"
+    ],
+    "feature_keys": [
+      "u",
+      "ux",
+      "uxx"
+    ],
+    "metrics_by_name": {
+      "u": {
+        "rel_l2": 0.5088699480866578,
+        "rmse": 0.3584576537383511,
+        "max_abs": 1.134451094086401
+      },
+      "u_x": {
+        "rel_l2": 0.8919664193577039,
+        "rmse": 3.871168689841047,
+        "max_abs": 38.79566668470766
+      },
+      "u_xx": {
+        "rel_l2": 0.9936803557173397,
+        "rmse": 116.52536484704214,
+        "max_abs": 1403.7148746452028
+      }
+    },
+    "summary_flat": {
+      "u_rel_l2": 0.5088699480866578,
+      "u_rmse": 0.3584576537383511,
+      "u_max_abs": 1.134451094086401,
+      "ux_rel_l2": 0.8919664193577039,
+      "ux_rmse": 3.871168689841047,
+      "ux_max_abs": 38.79566668470766,
+      "uxx_rel_l2": 0.9936803557173397,
+      "uxx_rmse": 116.52536484704214,
+      "uxx_max_abs": 1403.7148746452028
+    }
+  },
+  "eql_product_coefficients": {
+    "p0": {
+      "u * u": -0.20719424440360967,
+      "u * u_x": -0.1452267283918225,
+      "u * u_xx": -0.2829299429720038,
+      "u_x * u": 0.017038979807074917,
+      "u_x * u_x": 0.011942973124753009,
+      "u_x * u_xx": 0.02326723697848454,
+      "u_xx * u": 0.04548037734961774,
+      "u_xx * u_x": 0.03187813651639959,
+      "u_xx * u_xx": 0.06210481669947576
+    },
+    "p1": {
+      "u * u * u": 0.022505550615096615,
+      "u * u * u_x": 0.021558403530844265,
+      "u * u * u_xx": 0.039060347468227015,
+      "u * u_x * u": 0.015774605592423052,
+      "u * u_x * u_x": 0.015110730624526374,
+      "u * u_x * u_xx": 0.02737820487719875,
+      "u * u_xx * u": 0.030732003055447314,
+      "u * u_xx * u_x": 0.029438645359605123,
+      "u * u_xx * u_xx": 0.05333807371658627,
+      "u_x * u * u": -0.0018507831797235628,
+      "u_x * u * u_x": -0.0017728928884688097,
+      "u_x * u * u_xx": -0.0032121957522718474,
+      "u_x * u_x * u": -0.0012972521844298141,
+      "u_x * u_x * u_x": -0.001242657269378125,
+      "u_x * u_x * u_xx": -0.0022514943955094843,
+      "u_x * u_xx * u": -0.0025272998340276714,
+      "u_x * u_xx * u_x": -0.002420938309718861,
+      "u_x * u_xx * u_xx": -0.0043863494549337655,
+      "u_xx * u * u": -0.0049401031258457274,
+      "u_xx * u * u_x": -0.004732198669226388,
+      "u_xx * u * u_xx": -0.00857398016714021,
+      "u_xx * u_x * u": -0.003462620387693992,
+      "u_xx * u_x * u_x": -0.003316895856880818,
+      "u_xx * u_x * u_xx": -0.006009679914392695,
+      "u_xx * u_xx * u": -0.006745858697448446,
+      "u_xx * u_xx * u_x": -0.006461958938436076,
+      "u_xx * u_xx * u_xx": -0.01170802657532609
+    }
+  },
+  "feature_overlay_files": [
+    "run_results/eql_joint_training/allen_cahn_generated/seed_000/feature_overlays/u_overlay.pdf",
+    "run_results/eql_joint_training/allen_cahn_generated/seed_000/feature_overlays/ux_overlay.pdf",
+    "run_results/eql_joint_training/allen_cahn_generated/seed_000/feature_overlays/uxx_overlay.pdf"
+  ]
+}
