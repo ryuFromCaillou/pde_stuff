@@ -1,0 +1,32 @@
+{
+  "artifact_type": "burg_gen_training_coordinate_scatter",
+  "created_at_utc": "2026-09-02T17:57:41.761797+00:00",
+  "config": {
+    "dataset_name": "burg_gen",
+    "noise_level": 0.0,
+    "seed": 0,
+    "stride_t": 2,
+    "stride_x": 2,
+    "output_root": null,
+    "output_tag": null
+  },
+  "dataset_loader": "runs/run_eql_joint_training.py::load_dataset -> Datasets/data/processed/burg_gen/burg_gen.py::solve_burgers",
+  "coordinate_space": "physical",
+  "original_grid": {
+    "Nt": 252,
+    "Nx": 256
+  },
+  "sampling": {
+    "stride_t": 2,
+    "stride_x": 2,
+    "sampled_temporal_count": 126,
+    "sampled_spatial_count": 128,
+    "total_sampled_observations": 16128
+  },
+  "artifacts": {
+    "scatter_png": "/home/ghost/ghost/pde_stuff/Datasets/data/processed/burg_gen/artifacts/training_coords_scatter_20260902T175741Z/space_time_training_coords_scatter.png",
+    "scatter_pdf": "/home/ghost/ghost/pde_stuff/Datasets/data/processed/burg_gen/artifacts/training_coords_scatter_20260902T175741Z/space_time_training_coords_scatter.pdf",
+    "summary_json": "/home/ghost/ghost/pde_stuff/Datasets/data/processed/burg_gen/artifacts/training_coords_scatter_20260902T175741Z/summary.json",
+    "research_state_md": "/home/ghost/ghost/pde_stuff/Datasets/data/processed/burg_gen/artifacts/training_coords_scatter_20260902T175741Z/research_state.md"
+  }
+}
