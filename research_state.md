@@ -1,90 +1,91 @@
 # Research State
 
-## Current objective
-Understand why the joint SIREN + EQL system can achieve low internal PDE loss without recovering the true Burgers equation.
+## Experiment objective
+Evaluate whether low surrogate solution error also yields low derivative error for the current Burgers baseline, using surrogate autodiff derivatives against clean-rollout reference derivatives.
 
-## Current dataset
-burg_gen
+## Exact configuration
+```json
+{
+  "dataset_name": "burg_gen",
+  "noise_level": 0.0,
+  "seed": 0,
+  "stride_t": 2,
+  "stride_x": 2,
+  "device": "cpu",
+  "pretrain_epochs": 150,
+  "pretrain_lr": 0.001,
+  "epochs": 600,
+  "joint_lr": 0.001,
+  "batch_size": 1024,
+  "weight_decay": 0.0,
+  "lam_pde": 0.5,
+  "lam_data": 1.0,
+  "lam_sparse_eql": 0.0,
+  "sparse_eql_s": 0.001,
+  "tv_type": "tv_ux",
+  "tv_lambda": 0.0,
+  "hidden_size": 64,
+  "hidden_layers": 3,
+  "first_omega_0": 20.0,
+  "hidden_omega_0": 1.0,
+  "eql_prod_dim": 2,
+  "eql_num_layers": 1,
+  "feature_terms": [
+    "u",
+    "u_x",
+    "u_xx"
+  ],
+  "feature_normalize": true,
+  "feature_normalize_mode": "global_fixed",
+  "max_time_slices": 5,
+  "log_every": 50,
+  "output_root": null,
+  "output_tag": "derivative_diag_20260902T173629Z"
+}
+```
 
-## True governing PDE
-u_t = -u*u_x + 0.02*u_xx
+## Dataset
+- dataset: `burg_gen`
+- clean solution source: `Datasets/data/processed/burg_gen/burg_gen.py::solve_burgers`
+- numerical method: RK4 in time with second-order centered periodic finite differences in space
 
-## Current fixed modeling choices
-- feature normalization = fixed global scaling
-- eql_num_layers = 1
-- eql_prod_dim = 2
-- hidden_omega_0 = 1.0
-- first_omega_0 = 20.0
-- lam_data = 1.0
-- lam_pde = 0.5
+## Source/method for reference derivatives
+- u_t_ref: Clean-rollout Burgers RHS on physical grid, then scaled to normalized t.
+- u_x_ref: Generator periodic centered finite differences on physical grid, then scaled to normalized x.
+- u_xx_ref: Generator periodic centered second derivative on physical grid, then scaled to normalized x.
 
-## Known findings
-- Unnormalized EQL features caused PDE-loss explosion.
-- Fixed-global feature scaling stabilized training.
-- eql_num_layers=2 could not represent standalone quadratic u*u_x.
-- eql_num_layers=1, eql_prod_dim=2 can represent Burgers support.
-- Low internal PDE loss has not yet produced correct Burgers coefficient recovery.
-- Previous joint run had poor derivative fidelity, especially u_t.
-- Ordinary auxiliary L1 losses have already been removed from the active experiment setup.
+## Final surrogate error
+- u: MSE=1.178709e-02, RMSE=1.085684e-01, rel_L2=1.267502e-01, max_abs=6.232005e-01
 
-## Current open question
-Does removing TV and EQL sparsity allow the surrogate and quadratic EQL pathway to fit Burgers structure more faithfully?
+## Derivative errors
+- u_t: MSE=1.309988e-01, RMSE=3.619376e-01, rel_L2=7.420186e-01, max_abs=2.681521e+00
+- u_x: MSE=9.601796e+00, RMSE=3.098677e+00, rel_L2=4.234345e-01, max_abs=4.331585e+01
+- u_xx: MSE=1.273666e+05, RMSE=3.568846e+02, rel_L2=7.180764e-01, max_abs=6.274513e+03
 
-## Latest run
-Current best/relevant completed run: `run_results/eql_joint_training/burg_gen/seed_000_no_tv_no_sparse_20260902T000000Z_retry1`
+## PDE-feature diagnostics
+- u: MSE=1.178709e-02, RMSE=1.085684e-01, rel_L2=1.267502e-01, max_abs=6.232005e-01
+- u_x: MSE=9.601796e+00, RMSE=3.098677e+00, rel_L2=4.234345e-01, max_abs=4.331585e+01
+- u_xx: MSE=1.273666e+05, RMSE=3.568846e+02, rel_L2=7.180764e-01, max_abs=6.274513e+03
+- u*u_x: MSE=7.462580e+00, RMSE=2.731772e+00, rel_L2=6.134777e-01, max_abs=3.836394e+01
 
-Exact config changes from the fixed-global degree-2 baseline:
-- `tv_lambda: 1e-6 -> 0.0`
-- `lam_sparse_eql: 1e-5 -> 0.0`
-- all other settings kept at the prior fixed-global `eql_num_layers=1`, `eql_prod_dim=2` baseline
+## Recovered PDE
+`u_t_hat = (-0.0712414095461)*u + (+0.00323493793391)*u_x + (+5.63051937311e-05)*u_xx + (+0.0517073185312)*u*u + (-0.0119660395266)*u*u_x + (-8.20678696186e-06)*u*u_xx + (+0.000691894727604)*u_x*u_x + (+9.43013029704e-07)*u_x*u_xx + (+2.98267840997e-10)*u_xx*u_xx`
 
-Main metrics:
-- final_total_loss = 0.018574526710879235 at epoch 599
-- minimum_total_loss = 0.01845921298104619 at epoch 585
-- final_raw_data_mse = 0.01223345236882331 at epoch 599
-- minimum_raw_data_mse = 0.009095789195733174 at epoch 0
-- final_raw_pde_mse = 0.01268214810757883 at epoch 599
-- minimum_raw_pde_mse = 0.012299100602311748 at epoch 585
-- final weighted PDE loss = 0.006341074053789415
-- minimum weighted PDE loss = 0.006149550301155874 at epoch 585
-- full-grid data MSE = 0.011787090217085258
+## Important visual findings
+- Solution and derivative slice plots share the same physical time anchors used in the diagnostic snapshots.
+- Absolute derivative-error heatmaps expose where surrogate fit quality and derivative quality diverge across the full rollout.
+- The composite feature u*u_x is evaluated independently from the trained PDE readout using the surrogate solution and autodiff u_x.
 
-Derivative diagnostics:
-- `u` rel_l2 = 0.126750218978615, rmse = 0.10856836655805989
-- `u_t` rel_l2 = 0.9933017635022582, rmse = 7.311181096418604
-- `u_x` rel_l2 = 0.42343693601543425, rmse = 3.09874185261018
-- `u_xx` rel_l2 = 0.7180806118422397, rmse = 356.89760085849497
+## Anomalies/failures
+- Time-derivative error is substantially larger than solution error.
+- Second-derivative fidelity degrades relative to first-derivative fidelity.
 
-Coefficient results:
-- raw coeff(`u*u_x`) = -0.011966039526585091 versus true `-1.0`
-- raw coeff(`u_xx`) = 5.630519373114819e-05 versus true `0.02`
-- normalized coeff(`u*u_x`) = -1101.108736141359
-- normalized coeff(`u_xx`) = 2.769066333770752
-- quadratic product pathway is active, but coefficient recovery remains far from Burgers
+## Artifact directory
+`run_results/eql_joint_training/burg_gen/seed_000_derivative_diag_20260902T173629Z`
 
-Snapshot findings:
-- `u` snapshots improved visibly in the interior time range and track coarse profile shape reasonably well.
-- largest `u` mismatch remains near the endpoints, especially the latest time slice.
-- `u_x` snapshots still miss steeper gradients and show larger slice error around mid-to-late times.
-- `u_xx` snapshots remain poor across all selected times and are especially unstable at early and mid times.
+## Next suggested experiment
+- Repeat the same diagnostic with the same baseline but compare against a higher-order time-reference estimate from dense saved states to separate generator-discretization error from surrogate derivative error.
 
-Resulting conclusion:
-- Removing TV and EQL sparsity improved solution fit and lowered total/data/PDE losses relative to the prior minimal fixed-global baseline.
-- The quadratic EQL channel activated strongly, but it did not move the recovered raw Burgers coefficients materially toward the true equation.
-- Low internal PDE loss still appears to reflect internal consistency of the learned surrogate-plus-EQL system more than true PDE recovery.
-
-## Next requested experiment
-Completed on September 2, 2026:
-- `dataset = burg_gen`
-- fixed-global feature scaling
-- `eql_num_layers = 1`
-- `eql_prod_dim = 2`
-- `hidden_omega_0 = 1.0`
-- `first_omega_0 = 20.0`
-- `lam_data = 1.0`
-- `lam_pde = 0.5`
-- `tv_lambda = 0.0`
-- `lam_sparse_eql = 0.0`
-
-Next unresolved research question:
-- If removing TV and EQL sparsity improves surrogate fit but leaves `u_t` and `u_xx` fidelity poor and Burgers coefficients far from truth, which remaining baseline choice is driving the internal-consistency failure: the surrogate architecture/training dynamics, the primitive derivative quality, or the fixed-global normalization itself?
+## Summary file
+- summary: `run_results/eql_joint_training/burg_gen/seed_000_derivative_diag_20260902T173629Z/summary.json`
+- metrics: `run_results/eql_joint_training/burg_gen/seed_000_derivative_diag_20260902T173629Z/metrics.json`

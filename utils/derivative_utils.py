@@ -90,11 +90,81 @@ def compute_error_metrics(pred, ref, eps=1e-12):
     pred = np.asarray(pred, dtype=np.float64)
     ref = np.asarray(ref, dtype=np.float64)
     diff = pred - ref
+    mse = float(np.mean(diff**2))
     ref_l2 = np.linalg.norm(ref.reshape(-1))
     rel_l2 = float(np.linalg.norm(diff.reshape(-1)) / (ref_l2 + float(eps)))
-    rmse = float(np.sqrt(np.mean(diff**2)))
+    rmse = float(np.sqrt(mse))
     max_abs = float(np.max(np.abs(diff)))
-    return {"rel_l2": rel_l2, "rmse": rmse, "max_abs": max_abs}
+    return {"mse": mse, "rel_l2": rel_l2, "rmse": rmse, "max_abs": max_abs}
+
+
+def build_burgers_reference_derivative_grids(
+    *,
+    u_grid,
+    x_grid,
+    nu: float,
+    t_coord_scale: float = 1.0,
+    x_coord_scale: float = 1.0,
+):
+    """
+    Build reference Burgers derivatives from the clean rollout, independent of
+    the trained surrogate.
+
+    The spatial derivatives reuse the dataset generator's periodic centered
+    finite-difference operators. The time derivative is the clean-state Burgers
+    RHS evaluated using those same spatial operators.
+
+    Parameters
+    ----------
+    u_grid : array-like, shape (Nt, Nx)
+        Clean rollout snapshots in physical coordinates.
+    x_grid : array-like, shape (Nx,)
+        Physical spatial grid.
+    nu : float
+        Burgers viscosity used by the generator.
+    t_coord_scale, x_coord_scale : float
+        Affine normalization scales where coord_norm = (coord - b) / a.
+        Returned normalized derivatives satisfy:
+            du/dt_norm = a_t * du/dt_phys
+            du/dx_norm = a_x * du/dx_phys
+            d2u/dx_norm2 = a_x^2 * d2u/dx_phys2
+    """
+    u_grid = np.asarray(u_grid, dtype=np.float64)
+    x_grid = np.asarray(x_grid, dtype=np.float64).reshape(-1)
+    if u_grid.ndim != 2:
+        raise ValueError(f"Expected u_grid to be 2D; got ndim={u_grid.ndim}")
+    if u_grid.shape[1] != x_grid.size:
+        raise ValueError(
+            f"u_grid shape {u_grid.shape} is incompatible with x_grid size {x_grid.size}"
+        )
+    if x_grid.size < 2:
+        raise ValueError("Need at least two spatial points to compute reference derivatives.")
+
+    dx = float(x_grid[1] - x_grid[0])
+    ux_phys = np.stack([fd_first_periodic(row, dx) for row in u_grid], axis=0)
+    uxx_phys = np.stack([fd_second_periodic(row, dx) for row in u_grid], axis=0)
+    ut_phys = -u_grid * ux_phys + float(nu) * uxx_phys
+
+    x_scale = float(x_coord_scale)
+    t_scale = float(t_coord_scale)
+    return {
+        "u": {"physical": u_grid, "normalized": u_grid},
+        "u_x": {"physical": ux_phys, "normalized": x_scale * ux_phys},
+        "u_xx": {"physical": uxx_phys, "normalized": (x_scale**2) * uxx_phys},
+        "u_t": {"physical": ut_phys, "normalized": t_scale * ut_phys},
+        "u*u_x": {
+            "physical": u_grid * ux_phys,
+            "normalized": u_grid * (x_scale * ux_phys),
+        },
+        "metadata": {
+            "nu": float(nu),
+            "dx_physical": dx,
+            "t_coord_scale": t_scale,
+            "x_coord_scale": x_scale,
+            "spatial_operator": "second-order centered periodic finite differences",
+            "time_operator": "Burgers RHS evaluated on clean rollout states",
+        },
+    }
 
 
 def reconstruct_grid(t_np, x_np, y_np, round_decimals=6):

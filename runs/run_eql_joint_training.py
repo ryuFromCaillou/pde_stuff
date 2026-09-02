@@ -5,6 +5,7 @@ import csv
 import json
 import sys
 import time
+from datetime import datetime, timezone
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -23,6 +24,7 @@ from prog.featlib import FeatureTensor
 from prog.mlps import EQL, SirenMLP, rescale_polynomial_coefficients
 from utils.data_prep_utils import PDETrainDataset
 from utils.derivative_utils import (
+    build_burgers_reference_derivative_grids,
     build_reference_primitive_features,
     compute_primitive_feature_l2_scales,
     compute_error_metrics,
@@ -30,7 +32,11 @@ from utils.derivative_utils import (
     primitive_feature_name_to_key,
     reconstruct_grid,
 )
-from utils.feature_plotting import save_primitive_feature_overlays, save_time_slice_snapshots
+from utils.feature_plotting import (
+    save_primitive_feature_overlays,
+    save_space_time_heatmap,
+    save_time_slice_snapshots,
+)
 from utils.fit_utils import fit_data_and_pde, fit_model_to_data, predict_on_grid
 from utils.tv_utils import dispatch_tv
 
@@ -77,7 +83,7 @@ def load_dataset(dataset_name: str):
         t = raw["t"].reshape(-1)
         x = raw["x"].reshape(-1)
         u = np.asarray(raw["u"], dtype=np.float64)
-        return t, x, u, "periodic"
+        return t, x, u, "periodic", {"dataset_name": dataset_name}
 
     if dataset_name == "burgers":
         path = Path("Datasets/data/raw") / f"{dataset_name}.mat"
@@ -85,14 +91,20 @@ def load_dataset(dataset_name: str):
         t = raw["t"].reshape(-1)
         x = raw["x"].reshape(-1)
         u = np.asarray(raw["usol"], dtype=np.float64).T
-        return t, x, u, "periodic"
+        return t, x, u, "periodic", {"dataset_name": dataset_name}
 
     if dataset_name == "burg_gen":
         x, _u_final, _t_end, (t, u) = solve_burgers(
             seed=0,
             return_history=True,
         )
-        return t, x, np.asarray(u, dtype=np.float64), "periodic"
+        return t, x, np.asarray(u, dtype=np.float64), "periodic", {
+            "dataset_name": dataset_name,
+            "nu": 0.02,
+            "generator": "solve_burgers",
+            "time_integrator": "RK4",
+            "spatial_operator": "second-order centered periodic finite differences",
+        }
 
     raise ValueError(f"Unsupported dataset '{dataset_name}' for this run script.")
 
@@ -334,9 +346,61 @@ def build_reference_diagnostics(
     feature_terms: tuple[str, ...],
     *,
     derivative_mode: str,
+    dataset_name: str,
+    dataset_metadata: dict | None = None,
 ):
-    full_t_n, full_x_n = dataset.full_grid_normalized_flat()
+    dataset_metadata = dataset_metadata or {}
     u_ref_flat = dataset.u_grid.reshape(-1)
+
+    if dataset_name == "burg_gen":
+        nu = float(dataset_metadata.get("nu", 0.02))
+        derivative_grids = build_burgers_reference_derivative_grids(
+            u_grid=dataset.u_grid,
+            x_grid=dataset.x_grid,
+            nu=nu,
+            t_coord_scale=dataset.at_scale,
+            x_coord_scale=dataset.ax_scale,
+        )
+        feature_names = list(feature_terms)
+        by_name = {
+            name: np.asarray(derivative_grids[name]["normalized"], dtype=np.float64).reshape(-1)
+            for name in feature_names
+        }
+        by_name["u_t"] = np.asarray(derivative_grids["u_t"]["normalized"], dtype=np.float64).reshape(-1)
+        by_name["u*u_x"] = np.asarray(derivative_grids["u*u_x"]["normalized"], dtype=np.float64).reshape(-1)
+        return {
+            "t_flat": np.repeat(dataset.t_grid[:, None], dataset.x_grid.size, axis=1).reshape(-1),
+            "x_flat": np.repeat(dataset.x_grid[None, :], dataset.t_grid.size, axis=0).reshape(-1),
+            "u_flat": np.asarray(u_ref_flat, dtype=np.float64).reshape(-1),
+            "features": by_name,
+            "feature_grids_normalized": {
+                "u": np.asarray(derivative_grids["u"]["normalized"], dtype=np.float64),
+                "u_t": np.asarray(derivative_grids["u_t"]["normalized"], dtype=np.float64),
+                "u_x": np.asarray(derivative_grids["u_x"]["normalized"], dtype=np.float64),
+                "u_xx": np.asarray(derivative_grids["u_xx"]["normalized"], dtype=np.float64),
+                "u*u_x": np.asarray(derivative_grids["u*u_x"]["normalized"], dtype=np.float64),
+            },
+            "feature_grids_physical": {
+                "u": np.asarray(derivative_grids["u"]["physical"], dtype=np.float64),
+                "u_t": np.asarray(derivative_grids["u_t"]["physical"], dtype=np.float64),
+                "u_x": np.asarray(derivative_grids["u_x"]["physical"], dtype=np.float64),
+                "u_xx": np.asarray(derivative_grids["u_xx"]["physical"], dtype=np.float64),
+                "u*u_x": np.asarray(derivative_grids["u*u_x"]["physical"], dtype=np.float64),
+            },
+            "derivative_source": {
+                "label": "reference derivatives",
+                "u_t": "Clean-rollout Burgers RHS on physical grid, then scaled to normalized t.",
+                "u_x": "Generator periodic centered finite differences on physical grid, then scaled to normalized x.",
+                "u_xx": "Generator periodic centered second derivative on physical grid, then scaled to normalized x.",
+                "coordinate_scales": {
+                    "t_coord_scale": float(dataset.at_scale),
+                    "x_coord_scale": float(dataset.ax_scale),
+                },
+                "metadata": derivative_grids["metadata"],
+            },
+        }
+
+    full_t_n, full_x_n = dataset.full_grid_normalized_flat()
     ref_features = build_reference_primitive_features(
         full_t_n,
         full_x_n,
@@ -349,12 +413,22 @@ def build_reference_diagnostics(
         name: values[:, idx]
         for idx, name in enumerate(ref_features["feature_names"])
     }
-    by_name["u_t"] = -by_name["u"] * by_name["u_x"] + 0.02 * by_name["u_xx"]
+    by_name["u_t"] = np.full_like(by_name["u"], np.nan, dtype=np.float64)
     return {
-        "t_flat": np.asarray(full_t_n, dtype=np.float64).reshape(-1),
-        "x_flat": np.asarray(full_x_n, dtype=np.float64).reshape(-1),
+        "t_flat": np.repeat(dataset.t_grid[:, None], dataset.x_grid.size, axis=1).reshape(-1),
+        "x_flat": np.repeat(dataset.x_grid[None, :], dataset.t_grid.size, axis=0).reshape(-1),
         "u_flat": np.asarray(u_ref_flat, dtype=np.float64).reshape(-1),
         "features": by_name,
+        "feature_grids_normalized": {
+            name: np.asarray(values[:, idx], dtype=np.float64).reshape(dataset.u_grid.shape)
+            for idx, name in enumerate(ref_features["feature_names"])
+        },
+        "derivative_source": {
+            "label": "reference derivatives",
+            "u_t": "Unavailable from current fallback dataset path.",
+            "u_x": "Periodic finite differences on normalized x grid.",
+            "u_xx": "Periodic second finite differences on normalized x grid.",
+        },
     }
 
 
@@ -423,6 +497,128 @@ def write_metrics_csv(rows: list[dict], csv_path: Path) -> None:
         writer.writerows(rows)
 
 
+def format_scalar(value) -> str:
+    if value is None:
+        return "n/a"
+    if isinstance(value, float):
+        if np.isnan(value):
+            return "nan"
+        return f"{value:.6e}"
+    return str(value)
+
+
+def serialize_metric_block(metrics: dict[str, dict[str, float]]) -> list[str]:
+    lines = []
+    for name, values in metrics.items():
+        lines.append(
+            f"- {name}: "
+            f"MSE={format_scalar(values.get('mse'))}, "
+            f"RMSE={format_scalar(values.get('rmse'))}, "
+            f"rel_L2={format_scalar(values.get('rel_l2'))}, "
+            f"max_abs={format_scalar(values.get('max_abs'))}"
+        )
+    return lines
+
+
+def write_pde_outputs(out_dir: Path, eql_inspection: dict) -> dict[str, str]:
+    eql_dir = out_dir / "pde_outputs" / "eql"
+    eql_dir.mkdir(parents=True, exist_ok=True)
+
+    coeffs = eql_inspection["selected_raw_basis_coefficients"]
+    coeff_rows = [{"term": term, "coefficient": float(value)} for term, value in coeffs.items()]
+    write_metrics_csv(coeff_rows, eql_dir / "coefficients.csv")
+
+    recovered_text = "u_t_hat = " + " + ".join(
+        [f"({float(value):+.12g})*{term.replace(' ', '')}" for term, value in coeffs.items()]
+    )
+    (eql_dir / "pde.txt").write_text(recovered_text + "\n")
+    (eql_dir / "pde.json").write_text(
+        json.dumps(
+            {
+                "equation": recovered_text,
+                "selected_raw_basis_coefficients": coeffs,
+                "selected_normalized_basis_coefficients": eql_inspection["selected_normalized_basis_coefficients"],
+            },
+            indent=2,
+        )
+    )
+    (eql_dir / "diagnostics.json").write_text(json.dumps(eql_inspection, indent=2))
+    return {
+        "dir": str(eql_dir),
+        "pde_txt": str(eql_dir / "pde.txt"),
+        "pde_json": str(eql_dir / "pde.json"),
+        "coefficients_csv": str(eql_dir / "coefficients.csv"),
+        "diagnostics_json": str(eql_dir / "diagnostics.json"),
+    }
+
+
+def write_research_state(
+    *,
+    out_dir: Path,
+    cfg: RunConfig,
+    derivative_source: dict,
+    metrics: dict,
+    recovered_pde: str,
+    summary: dict,
+    important_findings: list[str],
+    anomalies: list[str],
+) -> str:
+    content = "\n".join(
+        [
+            "# Research State",
+            "",
+            "## Experiment objective",
+            "Evaluate whether low surrogate solution error also yields low derivative error for the current Burgers baseline, using surrogate autodiff derivatives against clean-rollout reference derivatives.",
+            "",
+            "## Exact configuration",
+            "```json",
+            json.dumps(asdict(cfg), indent=2),
+            "```",
+            "",
+            "## Dataset",
+            f"- dataset: `{cfg.dataset_name}`",
+            "- clean solution source: `Datasets/data/processed/burg_gen/burg_gen.py::solve_burgers`",
+            "- numerical method: RK4 in time with second-order centered periodic finite differences in space",
+            "",
+            "## Source/method for reference derivatives",
+            f"- u_t_ref: {derivative_source['u_t']}",
+            f"- u_x_ref: {derivative_source['u_x']}",
+            f"- u_xx_ref: {derivative_source['u_xx']}",
+            "",
+            "## Final surrogate error",
+            *serialize_metric_block({"u": metrics["solution_errors"]["u"]}),
+            "",
+            "## Derivative errors",
+            *serialize_metric_block(metrics["derivative_errors"]),
+            "",
+            "## PDE-feature diagnostics",
+            *serialize_metric_block(metrics["feature_diagnostics"]),
+            "",
+            "## Recovered PDE",
+            f"`{recovered_pde}`",
+            "",
+            "## Important visual findings",
+            *[f"- {item}" for item in important_findings],
+            "",
+            "## Anomalies/failures",
+            *[f"- {item}" for item in anomalies],
+            "",
+            "## Artifact directory",
+            f"`{out_dir}`",
+            "",
+            "## Next suggested experiment",
+            "- Repeat the same diagnostic with the same baseline but compare against a higher-order time-reference estimate from dense saved states to separate generator-discretization error from surrogate derivative error.",
+            "",
+            "## Summary file",
+            f"- summary: `{out_dir / 'summary.json'}`",
+            f"- metrics: `{out_dir / 'metrics.json'}`",
+        ]
+    ).strip() + "\n"
+    path = out_dir / "research_state.md"
+    path.write_text(content)
+    return content
+
+
 def build_coefficient_transform_summary(
     v_model: EQL,
     feature_terms: tuple[str, ...],
@@ -472,7 +668,7 @@ def run_experiment(cfg: RunConfig, *, out_dir: Path | None = None) -> dict:
     if cfg.device == "cuda" and not torch.cuda.is_available():
         raise RuntimeError("Requested CUDA but torch.cuda.is_available() is False.")
 
-    t_grid, x_grid, u_grid, derivative_mode = load_dataset(cfg.dataset_name)
+    t_grid, x_grid, u_grid, derivative_mode, dataset_metadata = load_dataset(cfg.dataset_name)
     dataset = PDETrainDataset(
         t_grid=t_grid,
         x_grid=x_grid,
@@ -573,6 +769,8 @@ def run_experiment(cfg: RunConfig, *, out_dir: Path | None = None) -> dict:
         dataset,
         cfg.feature_terms,
         derivative_mode=derivative_mode,
+        dataset_name=cfg.dataset_name,
+        dataset_metadata=dataset_metadata,
     )
     derivative_errors = {
         "u": compute_error_metrics(model_derivatives["u"], reference["u_flat"]),
@@ -611,6 +809,14 @@ def run_experiment(cfg: RunConfig, *, out_dir: Path | None = None) -> dict:
     x_unique = np.asarray(dataset.x_grid, dtype=np.float64).reshape(-1)
     u_ref_grid = np.asarray(reference["u_flat"], dtype=np.float64).reshape(dataset.u_grid.shape)
     u_pred_grid = np.asarray(model_derivatives["u"], dtype=np.float64).reshape(dataset.u_grid.shape)
+    ut_ref_grid = np.asarray(reference["features"]["u_t"], dtype=np.float64).reshape(dataset.u_grid.shape)
+    ut_pred_grid = np.asarray(model_derivatives["u_t"], dtype=np.float64).reshape(dataset.u_grid.shape)
+    ux_ref_grid = np.asarray(reference["features"]["u_x"], dtype=np.float64).reshape(dataset.u_grid.shape)
+    ux_pred_grid = np.asarray(model_derivatives["u_x"], dtype=np.float64).reshape(dataset.u_grid.shape)
+    uxx_ref_grid = np.asarray(reference["features"]["u_xx"], dtype=np.float64).reshape(dataset.u_grid.shape)
+    uxx_pred_grid = np.asarray(model_derivatives["u_xx"], dtype=np.float64).reshape(dataset.u_grid.shape)
+    uux_ref_grid = u_ref_grid * ux_ref_grid
+    uux_pred_grid = u_pred_grid * ux_pred_grid
     sample_grid = build_training_sample_grid(dataset)
     time_indices = build_snapshot_time_indices(len(t_unique))
     snapshot_files = {
@@ -623,11 +829,15 @@ def run_experiment(cfg: RunConfig, *, out_dir: Path | None = None) -> dict:
             output_dir=out_dir / "snapshots" / "u",
             value_name="u",
             time_indices=time_indices,
+            true_label="u_ref",
+            pred_label="u_theta",
         )]
     }
-    for feature_name in ("u_x", "u_xx"):
-        ref_grid = np.asarray(reference["features"][feature_name], dtype=np.float64).reshape(dataset.u_grid.shape)
-        pred_grid = np.asarray(model_derivatives[feature_name], dtype=np.float64).reshape(dataset.u_grid.shape)
+    for feature_name, ref_grid, pred_grid in (
+        ("u_t", ut_ref_grid, ut_pred_grid),
+        ("u_x", ux_ref_grid, ux_pred_grid),
+        ("u_xx", uxx_ref_grid, uxx_pred_grid),
+    ):
         snapshot_files[feature_name] = [str(path) for path in save_time_slice_snapshots(
             x_grid=x_unique,
             t_grid=t_unique,
@@ -636,7 +846,37 @@ def run_experiment(cfg: RunConfig, *, out_dir: Path | None = None) -> dict:
             output_dir=out_dir / "snapshots" / primitive_feature_name_to_key(feature_name),
             value_name=feature_name,
             time_indices=time_indices,
+            true_label=f"{feature_name}_ref",
+            pred_label=f"{feature_name}_AD",
         )]
+
+    abs_error_grids = {
+        "u": np.abs(u_pred_grid - u_ref_grid),
+        "u_t": np.abs(ut_pred_grid - ut_ref_grid),
+        "u_x": np.abs(ux_pred_grid - ux_ref_grid),
+        "u_xx": np.abs(uxx_pred_grid - uxx_ref_grid),
+        "u*u_x": np.abs(uux_pred_grid - uux_ref_grid),
+    }
+    heatmap_files = {}
+    for name, grid in abs_error_grids.items():
+        key = primitive_feature_name_to_key(name)
+        heatmap_files[name] = str(
+            save_space_time_heatmap(
+                x_grid=x_unique,
+                t_grid=t_unique,
+                value_grid=grid,
+                output_path=out_dir / "heatmaps" / f"{key}_abs_error_heatmap.pdf",
+                title=f"|{name}_AD - {name}_ref|",
+                colorbar_label="absolute error",
+            )
+        )
+
+    feature_diagnostics = {
+        "u": compute_error_metrics(u_pred_grid.reshape(-1), u_ref_grid.reshape(-1)),
+        "u_x": compute_error_metrics(ux_pred_grid.reshape(-1), ux_ref_grid.reshape(-1)),
+        "u_xx": compute_error_metrics(uxx_pred_grid.reshape(-1), uxx_ref_grid.reshape(-1)),
+        "u*u_x": compute_error_metrics(uux_pred_grid.reshape(-1), uux_ref_grid.reshape(-1)),
+    }
 
     history_rows = [asdict(row) for row in (history.rows or [])]
     augmented_history_rows = compute_augmented_history_rows(history_rows, cfg)
@@ -666,6 +906,35 @@ def run_experiment(cfg: RunConfig, *, out_dir: Path | None = None) -> dict:
         cfg.feature_terms,
         pde_diagnostics["feature_scales_full_grid"] if cfg.feature_normalize else None,
     )
+    pde_output_files = write_pde_outputs(out_dir, eql_inspection)
+
+    metrics_payload = {
+        "solution_errors": {"u": derivative_errors["u"]},
+        "derivative_errors": {
+            "u_t": derivative_errors["u_t"],
+            "u_x": derivative_errors["u_x"],
+            "u_xx": derivative_errors["u_xx"],
+        },
+        "feature_diagnostics": feature_diagnostics,
+    }
+
+    selected_raw_coeffs = eql_inspection["selected_raw_basis_coefficients"]
+    recovered_pde = "u_t_hat = " + " + ".join(
+        [f"({float(value):+.12g})*{term.replace(' ', '')}" for term, value in selected_raw_coeffs.items()]
+    )
+
+    important_findings = [
+        "Solution and derivative slice plots share the same physical time anchors used in the diagnostic snapshots.",
+        "Absolute derivative-error heatmaps expose where surrogate fit quality and derivative quality diverge across the full rollout.",
+        "The composite feature u*u_x is evaluated independently from the trained PDE readout using the surrogate solution and autodiff u_x.",
+    ]
+    anomalies = []
+    if derivative_errors["u_t"]["rel_l2"] > derivative_errors["u"]["rel_l2"] * 2.0:
+        anomalies.append("Time-derivative error is substantially larger than solution error.")
+    if derivative_errors["u_xx"]["rel_l2"] > derivative_errors["u_x"]["rel_l2"]:
+        anomalies.append("Second-derivative fidelity degrades relative to first-derivative fidelity.")
+    if not anomalies:
+        anomalies.append("No obvious anomaly threshold fired; inspect the heatmaps and time-slice plots.")
 
     training_metrics = {
         "final": {
@@ -721,16 +990,23 @@ def run_experiment(cfg: RunConfig, *, out_dir: Path | None = None) -> dict:
             "training_dataset_scale_metadata": fixed_scale_info,
         },
         "feature_metrics": feature_metrics,
+        "metrics": metrics_payload,
         "eql_product_coefficients": product_coeffs,
         "eql_coefficient_recovery": coefficient_summary,
         "eql_inspection": eql_inspection,
+        "recovered_pde": recovered_pde,
+        "reference_derivative_source": reference["derivative_source"],
         "feature_overlay_files": [str(path) for path in overlays],
         "snapshot_time_indices": [int(idx) for idx in time_indices],
         "snapshot_times": [float(t_unique[idx]) for idx in time_indices],
         "snapshot_files": snapshot_files,
+        "heatmap_files": heatmap_files,
+        "pde_output_files": pde_output_files,
     }
 
     (out_dir / "config.json").write_text(json.dumps(asdict(cfg), indent=2))
+    (out_dir / "metrics.json").write_text(json.dumps(metrics_payload, indent=2))
+    (out_dir / "derivative_metrics.json").write_text(json.dumps(metrics_payload["derivative_errors"], indent=2))
     (out_dir / "loss_history.json").write_text(json.dumps(augmented_history_rows, indent=2))
     (out_dir / "summary.json").write_text(json.dumps(summary, indent=2))
     (out_dir / "eql_inspection.json").write_text(json.dumps(eql_inspection, indent=2))
@@ -743,6 +1019,17 @@ def run_experiment(cfg: RunConfig, *, out_dir: Path | None = None) -> dict:
         },
         out_dir / "models.pt",
     )
+    research_state_text = write_research_state(
+        out_dir=out_dir,
+        cfg=cfg,
+        derivative_source=reference["derivative_source"],
+        metrics=metrics_payload,
+        recovered_pde=recovered_pde,
+        summary=summary,
+        important_findings=important_findings,
+        anomalies=anomalies,
+    )
+    (Path("research_state.md")).write_text(research_state_text)
     return summary
 
 

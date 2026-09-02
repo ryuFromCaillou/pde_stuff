@@ -144,6 +144,8 @@ def save_time_slice_snapshots(
     value_name,
     sample_grid=None,
     time_indices=None,
+    true_label="reference",
+    pred_label="model",
 ):
     """
     Save one PDF per selected time slice for true vs learned 1D snapshots.
@@ -168,8 +170,8 @@ def save_time_slice_snapshots(
     saved_paths = []
     for time_idx in time_indices:
         fig, ax = plt.subplots(figsize=(7.0, 4.2))
-        ax.plot(x_grid, true_grid[time_idx], label="true", linewidth=2.0)
-        ax.plot(x_grid, pred_grid[time_idx], label="learned", linewidth=1.8, linestyle="--")
+        ax.plot(x_grid, true_grid[time_idx], label=true_label, linewidth=2.0)
+        ax.plot(x_grid, pred_grid[time_idx], label=pred_label, linewidth=1.8, linestyle="--")
         if sample_grid is not None:
             sample_values = np.asarray(sample_grid, dtype=np.float64)
             if sample_values.shape != true_grid.shape:
@@ -194,3 +196,42 @@ def save_time_slice_snapshots(
         saved_paths.append(savefig_atomic(fig, output_dir / filename))
 
     return saved_paths
+
+
+def save_space_time_heatmap(
+    *,
+    x_grid,
+    t_grid,
+    value_grid,
+    output_path,
+    title,
+    colorbar_label,
+    cmap: str = "magma",
+):
+    """
+    Save a space-time heatmap on a rectangular mesh.
+    """
+    x_grid = np.asarray(x_grid, dtype=np.float64).reshape(-1)
+    t_grid = np.asarray(t_grid, dtype=np.float64).reshape(-1)
+    value_grid = np.asarray(value_grid, dtype=np.float64)
+
+    if value_grid.shape != (t_grid.size, x_grid.size):
+        raise ValueError(
+            f"value_grid shape {value_grid.shape} does not match "
+            f"(Nt, Nx)=({t_grid.size}, {x_grid.size})"
+        )
+
+    fig, ax = plt.subplots(figsize=(7.6, 4.8))
+    image = ax.imshow(
+        value_grid,
+        aspect="auto",
+        origin="lower",
+        extent=[float(x_grid[0]), float(x_grid[-1]), float(t_grid[0]), float(t_grid[-1])],
+        cmap=cmap,
+    )
+    ax.set_title(title)
+    ax.set_xlabel("x")
+    ax.set_ylabel("t")
+    fig.colorbar(image, ax=ax, label=colorbar_label)
+    fig.tight_layout()
+    return savefig_atomic(fig, output_path)
