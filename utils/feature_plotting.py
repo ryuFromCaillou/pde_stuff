@@ -132,3 +132,65 @@ def save_primitive_feature_overlays(
         saved_paths.append(savefig_atomic(fig, output_dir / f"{feature_key}_overlay.pdf"))
 
     return saved_paths
+
+
+def save_time_slice_snapshots(
+    *,
+    x_grid,
+    t_grid,
+    true_grid,
+    pred_grid,
+    output_dir,
+    value_name,
+    sample_grid=None,
+    time_indices=None,
+):
+    """
+    Save one PDF per selected time slice for true vs learned 1D snapshots.
+    """
+    x_grid = np.asarray(x_grid, dtype=np.float64).reshape(-1)
+    t_grid = np.asarray(t_grid, dtype=np.float64).reshape(-1)
+    true_grid = np.asarray(true_grid, dtype=np.float64)
+    pred_grid = np.asarray(pred_grid, dtype=np.float64)
+    if true_grid.shape != pred_grid.shape:
+        raise ValueError(
+            f"true_grid and pred_grid must share shape; got {true_grid.shape} vs {pred_grid.shape}"
+        )
+    if true_grid.ndim != 2:
+        raise ValueError(f"Expected 2D grids; got ndim={true_grid.ndim}")
+
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    if time_indices is None:
+        time_indices = select_evenly_spaced_time_indices(len(t_grid), max_slices=5)
+
+    saved_paths = []
+    for time_idx in time_indices:
+        fig, ax = plt.subplots(figsize=(7.0, 4.2))
+        ax.plot(x_grid, true_grid[time_idx], label="true", linewidth=2.0)
+        ax.plot(x_grid, pred_grid[time_idx], label="learned", linewidth=1.8, linestyle="--")
+        if sample_grid is not None:
+            sample_values = np.asarray(sample_grid, dtype=np.float64)
+            if sample_values.shape != true_grid.shape:
+                raise ValueError(
+                    f"sample_grid must match true_grid shape; got {sample_values.shape} vs {true_grid.shape}"
+                )
+            ax.scatter(
+                x_grid,
+                sample_values[time_idx],
+                label="train samples",
+                s=10,
+                alpha=0.6,
+                zorder=3,
+            )
+        ax.set_title(f"{value_name} at t={float(t_grid[time_idx]):.6g}")
+        ax.set_xlabel("x")
+        ax.set_ylabel(value_name)
+        ax.grid(True, alpha=0.25)
+        ax.legend()
+        fig.tight_layout()
+        filename = f"{primitive_feature_name_to_key(value_name)}_tidx_{int(time_idx):03d}.pdf"
+        saved_paths.append(savefig_atomic(fig, output_dir / filename))
+
+    return saved_paths
