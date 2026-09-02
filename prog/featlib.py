@@ -25,11 +25,13 @@ class FeatureTensor:
         normalize: bool = True,
         eps: float = 1e-12,
         keep_raw: bool = False,
+        fixed_scales: Optional[dict[str, float] | Iterable[float] | torch.Tensor] = None,
     ) -> None:
         self.terms = list(terms)
         self.normalize = bool(normalize)
         self.eps = float(eps)
         self.keep_raw = bool(keep_raw)
+        self.fixed_scales = fixed_scales
 
         self.names: List[str] = []
         self.scales: Optional[torch.Tensor] = None
@@ -42,6 +44,24 @@ class FeatureTensor:
         return torch.autograd.grad(
             y, x, grad_outputs=torch.ones_like(y), create_graph=True, retain_graph=True
         )[0]
+
+    def _fixed_scale_for(self, name: str, *, device: torch.device, dtype: torch.dtype) -> Optional[torch.Tensor]:
+        if self.fixed_scales is None:
+            return None
+        if isinstance(self.fixed_scales, dict):
+            value = self.fixed_scales.get(name)
+            if value is None:
+                return None
+            return torch.tensor(float(value), device=device, dtype=dtype).clamp_min(self.eps)
+
+        index = len(self.names)
+        if isinstance(self.fixed_scales, torch.Tensor):
+            value = self.fixed_scales.reshape(-1)[index].detach().to(device=device, dtype=dtype)
+            return value.clamp_min(self.eps)
+
+        scales_list = list(self.fixed_scales)
+        value = scales_list[index]
+        return torch.tensor(float(value), device=device, dtype=dtype).clamp_min(self.eps)
 
     def build(
         self,
@@ -78,7 +98,9 @@ class FeatureTensor:
                 raise ValueError(f"Feature '{name}' must be (B,1); got {tuple(raw_.shape)}")
 
             if self.normalize and normalize_col:
-                s = self._l2_detached(raw_)     # scalar
+                s = self._fixed_scale_for(name, device=raw_.device, dtype=raw_.dtype)
+                if s is None:
+                    s = self._l2_detached(raw_)     # scalar
                 col = raw_ / s
             else:
                 s = torch.tensor(1.0, device=raw_.device, dtype=raw_.dtype)

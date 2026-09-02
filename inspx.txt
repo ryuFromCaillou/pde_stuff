@@ -1,0 +1,126 @@
+Training Script Inspection Summary
+
+Date: 2026-09-02
+Repository root: /home/ghost/ghost/pde_stuff
+
+Active run entrypoint
+- runs/run_eql_joint_training.py
+
+How to launch a run
+- From the repository root:
+  python runs/run_eql_joint_training.py
+
+- Example with common overrides:
+  python runs/run_eql_joint_training.py \
+    --device cpu \
+    --pretrain-epochs 150 \
+    --epochs 600 \
+    --batch-size 1024 \
+    --lam-pde 0.5 \
+    --tv-lambda 1e-6 \
+    --feature-normalize \
+    --feature-normalize-mode global_fixed
+
+Launch path details
+- The script builds a RunConfig with defaults and applies CLI overrides.
+- It loads one of: `Allen_Cahn*`, `burgers`, or generated `burg_gen`.
+- It constructs a PDETrainDataset with coordinate normalization and stride-based subsampling.
+- If `feature_normalize` is enabled with `feature_normalize_mode=global_fixed`, it computes one training-dataset L2 scale per primitive feature and freezes those scales for the full run.
+- If pretrain_epochs > 0, it first fits the SIREN u_model to data only.
+- It then jointly trains u_model and the EQL v_model using data and PDE losses.
+
+Current CLI-exposed arguments
+- device
+- pretrain-epochs
+- pretrain-lr
+- epochs
+- joint-lr
+- batch-size
+- stride-t
+- stride-x
+- lam-pde
+- lam-data
+- lam-param-l1
+- lam-sparse-eql
+- tv-lambda
+- hidden-size
+- hidden-layers
+- first-omega-0
+- hidden-omega-0
+- eql-prod-dim
+- eql-num-layers
+- feature-normalize
+- feature-normalize-mode
+- log-every
+
+Config fields present but not currently exposed on the CLI
+- dataset_name
+- noise_level
+- seed
+- lam_l1_data
+- lam_l1_pde
+- sparse_eql_s
+- tv_type
+- feature_terms
+- max_time_slices
+- output_root
+- output_tag
+
+Where results are saved
+- Output root:
+  run_results/eql_joint_training/<dataset_name_lower>/seed_<seed>/
+
+- Files written per run:
+  config.json
+  loss_history.json
+  summary.json
+  models.pt
+  feature_overlays/*.pdf
+
+- Additional summary fields currently emitted:
+  feature_normalization
+  pde_diagnostics
+  feature_metrics
+  eql_product_coefficients
+  eql_coefficient_recovery
+
+Current workspace state
+- run_results/ is currently empty in this workspace.
+
+Loss components in the active training path
+
+1. Pretraining phase: utils.fit_utils.fit_model_to_data(...)
+- data MSE loss
+- TV regularization via tv_terms
+- optional data L1 loss via lam_l1_data
+- optional smooth-L1 parameter sparsity via lam_sparse_eql
+
+- Pretraining total loss:
+  loss_data + loss_tv + loss_l1_data + loss_sparse_eql
+
+2. Joint phase: utils.fit_utils.fit_data_and_pde(...)
+- data MSE loss weighted by lam_data
+- PDE consistency MSE loss weighted by lam_pde
+- parameter L1 penalty on v_model weighted by lam_param_l1
+- data L1 loss weighted by lam_l1_data
+- PDE L1 loss weighted by lam_l1_pde
+- smooth-L1 sparsity on v_model parameters weighted by lam_sparse_eql
+- TV regularization via tv_terms
+
+- Joint total loss:
+  loss_data + loss_pde + loss_param_l1 + loss_l1_data + loss_l1_pde + loss_sparse_eql + loss_tv
+
+Loss fields recorded in history rows
+- total_loss
+- data_loss
+- pde_loss
+- tv_loss
+- param_l1_loss
+- l1_data_loss
+- l1_pde_loss
+- sparse_eql_loss
+
+Notes
+- The active run script uses utils/fit_utils.py for training.
+- prog/trainer.py defines an older PDETrainer abstraction, but it is not used by the current run script.
+- `eql_coefficient_recovery` records the normalized-to-raw coefficient transform for the active primitive feature basis.

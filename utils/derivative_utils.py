@@ -243,6 +243,45 @@ def build_reference_primitive_features(
     }
 
 
+def compute_primitive_feature_l2_scales(
+    t_np,
+    x_np,
+    u_ref_np,
+    feature_terms,
+    *,
+    derivative_mode: str = "periodic",
+    reference_feature_builder=None,
+    eps: float = 1e-12,
+):
+    """
+    Compute one fixed L2 scale per primitive feature from reference training data.
+    """
+    if reference_feature_builder is None:
+        ref_feats = build_reference_primitive_features(
+            t_np,
+            x_np,
+            u_ref_np,
+            feature_terms,
+            derivative_mode=derivative_mode,
+        )
+    else:
+        ref_feats = reference_feature_builder(t_np, x_np, u_ref_np, list(feature_terms))
+
+    values = np.asarray(ref_feats["values"], dtype=np.float64)
+    names = list(ref_feats["feature_names"])
+    scales = {}
+    for idx, name in enumerate(names):
+        scale = float(np.linalg.norm(values[:, idx].reshape(-1), ord=2))
+        scales[name] = max(scale, float(eps))
+
+    return {
+        "feature_names": names,
+        "scales_by_name": scales,
+        "values_shape": list(values.shape),
+        "derivative_mode": ref_feats.get("derivative_mode", derivative_mode),
+    }
+
+
 def evaluate_primitive_feature_metrics(
     model,
     t_np,

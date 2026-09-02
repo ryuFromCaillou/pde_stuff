@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import math
+from collections import Counter
 
 
 class SineLayer(nn.Module):
@@ -216,4 +217,56 @@ class EQL(nn.Module):
             product_polys[f"p{i}"] = poly
 
         return product_polys
+
+    @torch.no_grad()
+    def normalized_polynomial_coefficients(self, feature_names=None):
+        """
+        Return the full learned polynomial in the normalized input features.
+
+        The result combines the direct readout on primitive inputs with the final
+        EQL product slot expanded into monomials over those same inputs.
+        """
+        if len(self.linears) > 0:
+            K = self.linears[0].in_features
+        else:
+            K = self.readout.weight.shape[1]
+        if feature_names is None:
+            feature_names = [f"f{i}" for i in range(K)]
+        if len(feature_names) != K:
+            raise ValueError(f"Expected {K} feature names, got {len(feature_names)}")
+
+        coeffs = {}
+        readout = self.readout.weight.detach().cpu().reshape(-1)
+
+        for idx, name in enumerate(feature_names):
+            coeffs[(name,)] = coeffs.get((name,), 0.0) + float(readout[idx])
+
+        if len(self.linears) > 0:
+            product_polys = self.product_coefficients(
+                feature_names=feature_names,
+                include_readout=True,
+            )
+            final_key = f"p{len(self.linears) - 1}"
+            for monomial, coeff in product_polys[final_key].items():
+                coeffs[monomial] = coeffs.get(monomial, 0.0) + float(coeff)
+
+        return coeffs
+
+
+def rescale_polynomial_coefficients(coefficients, feature_scales):
+    """
+    Convert monomial coefficients from normalized features z_j = f_j / s_j
+    back to raw features f_j.
+    """
+    out = {}
+    scales_by_name = {str(k): float(v) for k, v in feature_scales.items()}
+    for monomial, coeff in coefficients.items():
+        power_counts = Counter(monomial)
+        denom = 1.0
+        for name, power in power_counts.items():
+            if name not in scales_by_name:
+                raise KeyError(f"Missing scale for feature '{name}'")
+            denom *= scales_by_name[name] ** power
+        out[monomial] = float(coeff) / denom
+    return out
         

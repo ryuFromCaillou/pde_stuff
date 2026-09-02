@@ -1,0 +1,101 @@
+Experiment Report: burg_gen fixed-global minimal degree-2 EQL joint training
+Output directory: run_results/eql_joint_training/burg_gen/seed_000_fixedglobal_deg2_minimal_20260902T1608Z
+
+1. Loss results
+final data loss: 1.5192837646556280e-02
+minimum data loss: 9.0908780268999564e-03 at epoch 0
+final raw PDE MSE: 1.4956347422585600e-02
+minimum raw PDE MSE: 1.4605933075977696e-02 at epoch 585
+final weighted PDE loss: 7.4781737112928001e-03
+final total loss: 2.2911306145408795e-02
+minimum total loss: 2.2772504312414971e-02 at epoch 595
+final TV contribution: 6.0586834435872293e-05
+final EQL sparsity contribution: 1.7970825161134441e-04
+final 10 epochs of loss history:
+{"data_loss": 0.015089609896734593, "epoch": 590, "l1_data_loss": 0.0, "l1_pde_loss": 0.0, "param_l1_loss": 0.0, "pde_loss": 0.007679252190485833, "raw_data_mse": 0.015089609896734593, "raw_pde_mse": 0.015358504380971666, "sparse_eql_loss": 0.00017777302381878217, "sparse_eql_loss_weighted": 0.00017777302381878217, "total_loss": 0.023006602619138974, "tv_loss": 5.996778747344035e-05, "tv_loss_weighted": 5.996778747344035e-05, "weighted_data_contribution": 0.015089609896734593, "weighted_pde_contribution": 0.007679252190485833}
+{"data_loss": 0.015164882757715763, "epoch": 591, "l1_data_loss": 0.0, "l1_pde_loss": 0.0, "param_l1_loss": 0.0, "pde_loss": 0.0075755845681424175, "raw_data_mse": 0.015164882757715763, "raw_pde_mse": 0.015151169136284835, "sparse_eql_loss": 0.00017797658016668663, "sparse_eql_loss_weighted": 0.00017797658016668663, "total_loss": 0.02297862968037999, "tv_loss": 6.018562335012821e-05, "tv_loss_weighted": 6.018562335012821e-05, "weighted_data_contribution": 0.015164882757715763, "weighted_pde_contribution": 0.0075755845681424175}
+{"data_loss": 0.015209892143805822, "epoch": 592, "l1_data_loss": 0.0, "l1_pde_loss": 0.0, "param_l1_loss": 0.0, "pde_loss": 0.0076510243649993625, "raw_data_mse": 0.015209892143805822, "raw_pde_mse": 0.015302048729998725, "sparse_eql_loss": 0.00017819748193557774, "sparse_eql_loss_weighted": 0.00017819748193557774, "total_loss": 0.023099034048971675, "tv_loss": 5.9919986914980064e-05, "tv_loss_weighted": 5.9919986914980064e-05, "weighted_data_contribution": 0.015209892143805822, "weighted_pde_contribution": 0.0076510243649993625}
+{"data_loss": 0.01513188827546343, "epoch": 593, "l1_data_loss": 0.0, "l1_pde_loss": 0.0, "param_l1_loss": 0.0, "pde_loss": 0.007683923194510123, "raw_data_mse": 0.01513188827546343, "raw_pde_mse": 0.015367846389020246, "sparse_eql_loss": 0.0001784351267223616, "sparse_eql_loss_weighted": 0.0001784351267223616, "total_loss": 0.023054799833704554, "tv_loss": 6.055338449114638e-05, "tv_loss_weighted": 6.055338449114638e-05, "weighted_data_contribution": 0.01513188827546343, "weighted_pde_contribution": 0.007683923194510123}
+{"data_loss": 0.015273753923201372, "epoch": 594, "l1_data_loss": 0.0, "l1_pde_loss": 0.0, "param_l1_loss": 0.0, "pde_loss": 0.007467616223804061, "raw_data_mse": 0.015273753923201372, "raw_pde_mse": 0.014935232447608122, "sparse_eql_loss": 0.00017866379297744957, "sparse_eql_loss_weighted": 0.00017866379297744957, "total_loss": 0.022980351178419022, "tv_loss": 6.03174166393555e-05, "tv_loss_weighted": 6.03174166393555e-05, "weighted_data_contribution": 0.015273753923201372, "weighted_pde_contribution": 0.007467616223804061}
+{"data_loss": 0.01504988062180697, "epoch": 595, "l1_data_loss": 0.0, "l1_pde_loss": 0.0, "param_l1_loss": 0.0, "pde_loss": 0.007483465951823053, "raw_data_mse": 0.01504988062180697, "raw_pde_mse": 0.014966931903646105, "sparse_eql_loss": 0.0001788794590596346, "sparse_eql_loss_weighted": 0.0001788794590596346, "total_loss": 0.02277250431241497, "tv_loss": 6.027839163647196e-05, "tv_loss_weighted": 6.027839163647196e-05, "weighted_data_contribution": 0.01504988062180697, "weighted_pde_contribution": 0.007483465951823053}
+{"data_loss": 0.01515668173808427, "epoch": 596, "l1_data_loss": 0.0, "l1_pde_loss": 0.0, "param_l1_loss": 0.0, "pde_loss": 0.007431970879672066, "raw_data_mse": 0.01515668173808427, "raw_pde_mse": 0.014863941759344131, "sparse_eql_loss": 0.00017910235813663652, "sparse_eql_loss_weighted": 0.00017910235813663652, "total_loss": 0.022828226376857077, "tv_loss": 6.047108151491672e-05, "tv_loss_weighted": 6.047108151491672e-05, "weighted_data_contribution": 0.01515668173808427, "weighted_pde_contribution": 0.007431970879672066}
+{"data_loss": 0.015150110325997784, "epoch": 597, "l1_data_loss": 0.0, "l1_pde_loss": 0.0, "param_l1_loss": 0.0, "pde_loss": 0.007633640874354612, "raw_data_mse": 0.015150110325997784, "raw_pde_mse": 0.015267281748709224, "sparse_eql_loss": 0.00017930989431786456, "sparse_eql_loss_weighted": 0.00017930989431786456, "total_loss": 0.023023429696285534, "tv_loss": 6.036851441927461e-05, "tv_loss_weighted": 6.036851441927461e-05, "weighted_data_contribution": 0.015150110325997784, "weighted_pde_contribution": 0.007633640874354612}
+{"data_loss": 0.01511563542520716, "epoch": 598, "l1_data_loss": 0.0, "l1_pde_loss": 0.0, "param_l1_loss": 0.0, "pde_loss": 0.007703563412799249, "raw_data_mse": 0.01511563542520716, "raw_pde_mse": 0.015407126825598498, "sparse_eql_loss": 0.00017950873007066548, "sparse_eql_loss_weighted": 0.00017950873007066548, "total_loss": 0.023059137165546417, "tv_loss": 6.04294566853371e-05, "tv_loss_weighted": 6.04294566853371e-05, "weighted_data_contribution": 0.01511563542520716, "weighted_pde_contribution": 0.007703563412799249}
+{"data_loss": 0.01519283764655628, "epoch": 599, "l1_data_loss": 0.0, "l1_pde_loss": 0.0, "param_l1_loss": 0.0, "pde_loss": 0.0074781737112928, "raw_data_mse": 0.01519283764655628, "raw_pde_mse": 0.0149563474225856, "sparse_eql_loss": 0.0001797082516113444, "sparse_eql_loss_weighted": 0.0001797082516113444, "total_loss": 0.022911306145408795, "tv_loss": 6.058683443587229e-05, "tv_loss_weighted": 6.058683443587229e-05, "weighted_data_contribution": 0.01519283764655628, "weighted_pde_contribution": 0.0074781737112928}
+
+2. Feature scales
+u: 1.0881081993510035e+02
+u_x: 8.4568317424692339e+02
+u_xx: 4.9179591254171566e+04
+
+3. Derivative diagnostics
+u: rel_l2=1.4136655227780440e-01, RMSE=1.2108804063948223e-01, max_abs=6.9752272895467382e-01
+u_t: rel_l2=9.9507408034362055e-01, RMSE=7.3242262050286460e+00, max_abs=1.0375569549594007e+02
+u_x: rel_l2=4.5767963704292147e-01, RMSE=3.3493323934798234e+00, max_abs=4.3447522362185552e+01
+u_xx: rel_l2=7.0982233724975119e-01, RMSE=3.5279310570755598e+02, max_abs=5.9678637043509434e+03
+
+4. EQL weight matrices
+linears.0.weight / W0 =
+[[ 3.3387721e-13 -2.9764341e-10 -9.6803456e-07]
+ [-1.6013053e-05  3.8705212e-09 -6.5058847e-11]]
+readout.weight / R =
+[[-7.5859303e+00 -6.8267798e+00 -3.5703232e+00 -7.2307870e-08]]
+
+5. Explicit EQL forward equation
+z1 = (+3.3387721298620832e-13)*u_norm + (-2.9764340991889071e-10)*u_x_norm + (-9.6803455562621821e-07)*u_xx_norm
+z2 = (-1.6013053027563728e-05)*u_norm + (+3.8705212368483899e-09)*u_x_norm + (-6.5058847198429248e-11)*u_xx_norm
+p = z1 * z2
+u_t_hat = (-7.5859303474426270e+00)*u_norm + (-6.8267798423767090e+00)*u_x_norm + (-3.5703232288360596e+00)*u_xx_norm + (-7.2307869913856848e-08)*p
+
+6. Coefficient extraction
+normalized feature basis coefficients:
+u: -7.5859303474426270e+00
+u_x: -6.8267798423767090e+00
+u_xx: -3.5703232288360596e+00
+u^2: 3.8658632688081132e-25
+u*u_x: -3.4463239563374453e-22
+u*u_xx: -1.1208579339859659e-18
+u_x^2: 8.3301206974165158e-26
+u_x*u_xx: 2.7092160427751492e-22
+u_xx^2: -4.5538926857308206e-24
+raw feature basis coefficients after undoing frozen global scales:
+u: -6.9716691336093373e-02
+u_x: -8.0725028595442054e-03
+u_xx: -7.2597659675205489e-05
+u^2: 3.2651438818442467e-29
+u*u_x: -3.7452113090628519e-27
+u*u_xx: -2.0945636992897244e-25
+u_x^2: 1.1647585690261404e-31
+u_x*u_xx: 6.5140491911622293e-30
+u_xx^2: -1.8828380327521021e-33
+
+7. Burgers comparison
+learned coefficient of u*u_x: -3.7452113090628519e-27
+target = -1.0
+learned coefficient of u_xx: -7.2597659675205489e-05
+target = 0.02
+all other learned raw-basis terms ranked by absolute coefficient:
+u: -6.9716691336093373e-02
+u_x: -8.0725028595442054e-03
+u*u_xx: -2.0945636992897244e-25
+u^2: 3.2651438818442467e-29
+u_x*u_xx: 6.5140491911622293e-30
+u_x^2: 1.1647585690261404e-31
+u_xx^2: -1.8828380327521021e-33
+
+8. Agent interpretation
+The EQL learned the following raw-basis polynomial terms with the largest magnitudes:
+u: -6.9716691336093373e-02
+u_x: -8.0725028595442054e-03
+u_xx: -7.2597659675205489e-05
+u*u_xx: -2.0945636992897244e-25
+u*u_x: -3.7452113090628519e-27
+u^2: 3.2651438818442467e-29
+u_x*u_xx: 6.5140491911622293e-30
+u_x^2: 1.1647585690261404e-31
+u_xx^2: -1.8828380327521021e-33
+Assessment:
+It did not recover Burgers coefficients faithfully in the raw basis.
+The equation is relatively sparse by a 1e-3 raw-coefficient threshold.
+Low PDE loss here mainly indicates that the EQL output matches the SIREN time derivative on the training distribution. It does not by itself guarantee identifiable or physically correct coefficients.
+If recovery fails, the likely blockers are coefficient non-identifiability under correlated learned features, finite-difference reference mismatch for scaling, residual surrogate error in u and derivatives, and the fact that optimizing u_model and PDE weights jointly can let the SIREN adapt to a convenient but not physically minimal representation.

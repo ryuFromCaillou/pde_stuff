@@ -1,0 +1,4 @@
+interface:
+  display_name: "Email Results"
+  short_description: "Package run results and email them"
+  default_prompt: "Use $email-results-mailer to package the latest run_results folder and email it."
