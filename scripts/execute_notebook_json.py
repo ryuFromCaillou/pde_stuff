@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import contextlib
 import io
 import json
 import os
 import sys
 import traceback
+from io import BytesIO
 from pathlib import Path
 
 
@@ -38,6 +40,17 @@ def make_execute_result(text: str) -> dict:
     }
 
 
+def make_display_data_png(png_bytes: bytes, text: str) -> dict:
+    return {
+        "output_type": "display_data",
+        "metadata": {},
+        "data": {
+            "image/png": base64.b64encode(png_bytes).decode("ascii"),
+            "text/plain": [text],
+        },
+    }
+
+
 def make_error(exc: BaseException) -> dict:
     return {
         "output_type": "error",
@@ -63,6 +76,10 @@ def run_notebook(notebook_path: Path, update_from_cell: int) -> None:
 
     os.environ.setdefault("MPLBACKEND", "Agg")
     os.environ.setdefault("MPLCONFIGDIR", "/tmp/mpl")
+    try:
+        import matplotlib.pyplot as plt  # type: ignore
+    except Exception:
+        plt = None
 
     exec_count = 1
     for idx, cell in enumerate(notebook["cells"]):
@@ -74,6 +91,7 @@ def run_notebook(notebook_path: Path, update_from_cell: int) -> None:
         display_buffer.clear()
         cell_outputs: list[dict] = []
         code = notebook_source(cell)
+        pre_fig_nums = set(plt.get_fignums()) if plt is not None else set()
 
         try:
             with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
@@ -89,6 +107,14 @@ def run_notebook(notebook_path: Path, update_from_cell: int) -> None:
                 cell_outputs.extend(
                     make_execute_result(as_text(obj)) for obj in display_buffer if as_text(obj)
                 )
+                if plt is not None:
+                    new_fig_nums = [num for num in plt.get_fignums() if num not in pre_fig_nums]
+                    for fig_num in new_fig_nums:
+                        fig = plt.figure(fig_num)
+                        buf = BytesIO()
+                        fig.savefig(buf, format="png", bbox_inches="tight")
+                        cell_outputs.append(make_display_data_png(buf.getvalue(), f"<Figure size {fig.get_size_inches()[0]:.0f}x{fig.get_size_inches()[1]:.0f}>"))
+                    plt.close("all")
                 cell_outputs.append(make_error(exc))
                 cell["outputs"] = cell_outputs
                 cell["execution_count"] = exec_count
@@ -105,8 +131,18 @@ def run_notebook(notebook_path: Path, update_from_cell: int) -> None:
             cell_outputs.extend(
                 make_execute_result(as_text(obj)) for obj in display_buffer if as_text(obj)
             )
+            if plt is not None:
+                new_fig_nums = [num for num in plt.get_fignums() if num not in pre_fig_nums]
+                for fig_num in new_fig_nums:
+                    fig = plt.figure(fig_num)
+                    buf = BytesIO()
+                    fig.savefig(buf, format="png", bbox_inches="tight")
+                    cell_outputs.append(make_display_data_png(buf.getvalue(), f"<Figure size {fig.get_size_inches()[0]:.0f}x{fig.get_size_inches()[1]:.0f}>"))
+                plt.close("all")
             cell["outputs"] = cell_outputs
             cell["execution_count"] = exec_count
+        elif plt is not None:
+            plt.close("all")
 
         exec_count += 1
 
