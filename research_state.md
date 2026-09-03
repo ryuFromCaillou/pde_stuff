@@ -89,3 +89,6 @@ Evaluate whether low surrogate solution error also yields low derivative error f
 ## Summary file
 - summary: `run_results/eql_joint_training/burg_gen/seed_000_derivative_diag_20260902T173629Z/summary.json`
 - metrics: `run_results/eql_joint_training/burg_gen/seed_000_derivative_diag_20260902T173629Z/metrics.json`
+
+## Diagnostic notebooks
+- `notebook/diagnostics/burgers_minimal_discovery_story.ipynb`: Linear, bare-bones Burgers discovery walkthrough created on 2026-09-03. Covers clean data inspection, data-only SIREN fitting, surrogate autodiff derivative checks, direct least-squares Burgers recovery, a minimal visible SymNet construction, exact Burgers hand-initialization, frozen-surrogate SymNet drift from the exact initialization, and an optional joint-training extension.
