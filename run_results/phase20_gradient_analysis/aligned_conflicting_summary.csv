@@ -1,0 +1,3 @@
+,checkpoints,mean future derivative change,mean coefficient error
+aligned cosine >= 0,1.0,-9171.154745497903,0.9643839296883523
+conflicting cosine < 0,3.0,-1477.0200437794144,0.9706743083835215
