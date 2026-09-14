@@ -1,0 +1,56 @@
+{
+  "optimizer": "SGD",
+  "learning_rate": 0.0005,
+  "adam_learning_rate": 0.0005,
+  "learning_rate_changed": false,
+  "learning_rate_rationale": "Direct transfer; no tuning or fallback applied",
+  "momentum": 0.0,
+  "dampening": 0.0,
+  "nesterov": false,
+  "weight_decay": 0.0,
+  "scheduler": null,
+  "clipping": null,
+  "mixed_precision": false,
+  "foreach": false,
+  "fused": false,
+  "seed": 19219,
+  "batch_seed": 19220,
+  "dataset_seed": 0,
+  "epochs": 1000,
+  "checkpoints": [
+    0,
+    50,
+    200,
+    500,
+    1000
+  ],
+  "batch_size": 4096,
+  "architecture": "SirenMLP(64,3,20,1) + existing MinimalSymNet",
+  "feature_terms": [
+    "u",
+    "u_x",
+    "u_xx"
+  ],
+  "scales": [
+    0.8564476370811462,
+    2.418001890182495,
+    49.38141632080078
+  ],
+  "loss_terms": {
+    "data_MSE": 1.0,
+    "PDE_residual_MSE": 0.5
+  },
+  "additional_loss_terms": [],
+  "device": "cpu",
+  "dtype": "float32",
+  "torch_version": "2.14.0+cu130",
+  "threads": 2,
+  "adam_sha256": {
+    "snapshot_metrics.csv": "b87e2e3c72ef0d888ce436150948cfae5864a2470568f782c3caa940dbdca0ae",
+    "checkpoint_table.csv": "cb495833318a618df5995bead6009b8392735d78d0c53adfa51ccc14c359891d",
+    "update_geometry_history.csv": "e288ee5b226c216bff83157cdfa3f92820a16809315f1d538a8e1af835569eb6"
+  },
+  "initial_match_rtol": 2e-05,
+  "snapshot_timing": "post-step except terminal; geometry/loss/coefficients pre-step",
+  "reconstruction": "seeded initialization/batches; scales from saved Phase19B notebook output; no archived Phase21 tensors"
+}

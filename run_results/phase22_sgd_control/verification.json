@@ -1,0 +1,15 @@
+{
+  "initial_saved_adam_match": true,
+  "update_check_passed": true,
+  "minimum_sgd_update_cosine": 0.9999999971900838,
+  "maximum_sgd_step_relative_error": 7.496730951158311e-05,
+  "saved_adam_files_unchanged": true,
+  "terminal_update": "absent by design",
+  "diagnostic_epochs": [
+    0,
+    50,
+    200,
+    500,
+    1000
+  ]
+}
