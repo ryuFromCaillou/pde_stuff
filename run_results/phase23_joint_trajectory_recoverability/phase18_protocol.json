@@ -1,0 +1,48 @@
+{
+  "scaled_runs": 25,
+  "loose_successes": 25,
+  "strong_successes": 0,
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24
+  ],
+  "optimizer": "Adam",
+  "learning_rate": 0.01,
+  "epochs": 1000,
+  "loss": "MSE(SymNet(scaled primitives), frozen surrogate u_t)",
+  "primary_recovery_criterion": {
+    "transport_abs": 0.25,
+    "diffusion_abs": 0.02,
+    "spurious_l2": 0.25
+  },
+  "secondary_strong_criterion": {
+    "transport_abs": 0.1,
+    "diffusion_abs": 0.01,
+    "spurious_l2": 0.1
+  },
+  "convergence_epoch_defined_in_phase18": false,
+  "scaling": "full-grid RMS for [u,u_x,u_xx]; same primitive-induced product coefficient conversion"
+}

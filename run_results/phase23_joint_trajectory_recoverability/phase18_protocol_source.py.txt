@@ -1,0 +1,88 @@
+# Phase 18: paired random-initialization reliability under the fixed Phase-17 scaling.
+phase18_seeds = list(range(25))
+phase18_epochs = 1000
+phase18_rep_seeds = {0, 1, 2, 3, 4}
+phase18_feature_names = list(phase17_feature_names)
+phase18_truth_xi = phase17_truth_xi.copy()
+phase18_theta_physical = phase17_theta_physical
+phase18_target = phase17_target
+phase18_model_scales = phase17_model_feature_scales.copy()
+phase18_loose = {"transport_abs": 0.25, "diffusion_abs": 0.02, "spurious_l2": 0.25}
+phase18_strong = {"transport_abs": 0.10, "diffusion_abs": 0.01, "spurious_l2": 0.10}
+phase18_spurious_idx = [i for i in range(9) if i not in (2, 4)]
+print("Success criteria fixed before evaluating counts:")
+print("loose: |xi[u*u_x]+1| < 0.25, |xi[u_xx]-0.02| < 0.02, spurious L2 < 0.25")
+print("strong: |xi[u*u_x]+1| < 0.10, |xi[u_xx]-0.02| < 0.01, spurious L2 < 0.10")
+
+def phase18_is_success(xi, thresholds):
+    spurious = float(np.linalg.norm(np.asarray(xi)[phase18_spurious_idx]))
+    return (abs(float(xi[4]) + 1.0) < thresholds["transport_abs"] and
+            abs(float(xi[2]) - 0.02) < thresholds["diffusion_abs"] and
+            spurious < thresholds["spurious_l2"])
+
+def phase18_coefficients(model, treatment):
+    beta = np.array([float(v) for v in product_term_dict(model).values()], dtype=np.float64)
+    return beta if treatment == "unscaled" else beta / phase18_model_scales
+
+def phase18_run(seed, treatment, retain_history=False):
+    features = frozen_feature_tensor if treatment == "unscaled" else phase17_scaled_primitive_tensor
+    torch.manual_seed(int(seed))
+    model = MinimalSymNet().to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
+    history = []
+    min_loss = float("inf"); min_epoch = 0
+    for epoch in range(phase18_epochs + 1):
+        prediction = model(features)
+        loss = random_frozen_loss_fn(prediction, frozen_ut_target)
+        loss_value = float(loss.item())
+        xi = phase18_coefficients(model, treatment)
+        pde_prediction_mse = float(np.mean((phase18_theta_physical @ xi - phase18_target) ** 2))
+        if loss_value < min_loss:
+            min_loss, min_epoch = loss_value, epoch
+        if retain_history or epoch in (0, phase18_epochs):
+            row = {"seed": int(seed), "treatment": treatment, "epoch": int(epoch), "pde_mse": loss_value,
+                   "coefficient_error": float(np.linalg.norm(xi - phase18_truth_xi)),
+                   "pde_prediction_mse": pde_prediction_mse,
+                   **{f"xi_{name}": float(value) for name, value in zip(phase18_feature_names, xi)}}
+            history.append(row)
+        if epoch == phase18_epochs:
+            final_xi = xi.copy(); final_loss = loss_value; final_prediction_mse = pde_prediction_mse
+            break
+        optimizer.zero_grad(); loss.backward(); optimizer.step()
+    return model, {"seed": int(seed), "treatment": treatment, "initial_pde_mse": float(history[0]["pde_mse"]),
+                   "minimum_pde_mse": float(min_loss), "epoch_of_minimum_pde_mse": int(min_epoch),
+                   "final_pde_mse": float(final_loss), "pde_prediction_mse": float(final_prediction_mse),
+                   "coefficient_error": float(np.linalg.norm(final_xi - phase18_truth_xi)),
+                   "loose_success": bool(phase18_is_success(final_xi, phase18_loose)),
+                   "strong_success": bool(phase18_is_success(final_xi, phase18_strong)),
+                   **{f"xi_{name}": float(value) for name, value in zip(phase18_feature_names, final_xi)}}, history
+
+# Sanity checks: same seeded initial tensors, frozen surrogate, and no regularization.
+phase18_pair_checks = []
+for seed in phase18_seeds:
+    torch.manual_seed(seed); check_unscaled = MinimalSymNet().to(device); state_u = {k: v.detach().clone() for k,v in check_unscaled.state_dict().items()}
+    torch.manual_seed(seed); check_scaled = MinimalSymNet().to(device); state_s = {k: v.detach().clone() for k,v in check_scaled.state_dict().items()}
+    phase18_pair_checks.append(all(torch.equal(state_u[k], state_s[k]) for k in state_u))
+assert all(phase18_pair_checks)
+assert all(not p.requires_grad for p in surrogate.parameters()) if "surrogate" in globals() else True
+print(f"paired initial parameter tensors identical for all {len(phase18_seeds)} seeds: {all(phase18_pair_checks)}")
+print("scaled conversion uses Phase-17 primitive-induced product scales: True")
+print("regularization active: none; surrogate parameters trainable: False")
+
+phase18_rows = []; phase18_histories = []
+for seed in phase18_seeds:
+    for treatment in ("unscaled", "scaled"):
+        model, summary, history = None, None, None
+        model, summary, history = (lambda result: result)(phase18_run(seed, treatment, retain_history=(seed in phase18_rep_seeds)))
+        phase18_rows.append(summary)
+        if history:
+            phase18_histories.extend(history)
+phase18_runs_df = pd.DataFrame(phase18_rows)
+phase18_histories_df = pd.DataFrame(phase18_histories)
+phase18_runs_df["spurious_l2"] = np.sqrt(sum(phase18_runs_df[f"xi_{phase18_feature_names[i]}"]**2 for i in phase18_spurious_idx))
+phase18_runs_df["ever_loose_success"] = phase18_runs_df["loose_success"]
+phase18_runs_df["ever_strong_success"] = phase18_runs_df["strong_success"]
+phase18_output_dir = Path("run_results") / "phase18_feature_scaling_reliability"; phase18_output_dir.mkdir(parents=True, exist_ok=True)
+phase18_runs_df.to_csv(phase18_output_dir / "per_run.csv", index=False)
+phase18_histories_df.to_csv(phase18_output_dir / "representative_histories.csv", index=False)
+print(f"completed {len(phase18_runs_df)} paired runs ({len(phase18_seeds)} seeds x 2 treatments)")

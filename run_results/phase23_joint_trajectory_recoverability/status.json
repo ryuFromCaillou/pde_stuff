@@ -1,0 +1,6 @@
+{
+  "status": "complete",
+  "all_joint_metrics_reproduced": true,
+  "theta_frozen_checks": "passed",
+  "checkpoint_reload_checks": "passed"
+}
