@@ -1,0 +1,70 @@
+{
+  "grid": {
+    "lambda_data": [
+      0.1,
+      1.0,
+      10.0
+    ],
+    "lambda_pde": [
+      0.001,
+      0.01,
+      0.1,
+      1.0
+    ]
+  },
+  "optimizer": "Adam",
+  "learning_rate": 0.0005,
+  "seed": 19219,
+  "batch_seed": 19220,
+  "epochs": 1000,
+  "checkpoints": [
+    0,
+    50,
+    200,
+    500,
+    1000
+  ],
+  "batch_size": 4096,
+  "architecture": "SirenMLP(hidden_size=64, hidden_layers=3, first_omega_0=20, hidden_omega_0=1) + MinimalSymNet",
+  "feature_scaling": "detached fixed transferred RMS [u,u_x,u_xx]",
+  "scales": [
+    0.8564476370811462,
+    2.418001890182495,
+    49.38141632080078
+  ],
+  "regularization": "none",
+  "only_vary": [
+    "lambda_data",
+    "lambda_pde"
+  ],
+  "reuse": {
+    "source": "run_results/phase19b_i_pde_loss_weight_sweep",
+    "points": [
+      [
+        1.0,
+        0.001
+      ],
+      [
+        1.0,
+        0.01
+      ],
+      [
+        1.0,
+        0.1
+      ]
+    ],
+    "reason": "identical seed, initialization, batches, scales, optimizer, learning rate, duration, and diagnostics"
+  },
+  "derivative_error_metric": "u_x_mse + u_xx_mse, matching Phase 20 convention",
+  "torch_num_threads": 4,
+  "device": "cpu",
+  "dtype": "float32",
+  "torch_version": "2.14.0+cu130",
+  "snapshot_diagnostic_checkpoints": [
+    0,
+    50,
+    200,
+    500,
+    1000
+  ]
+}
