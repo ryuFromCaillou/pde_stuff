@@ -1019,7 +1019,8 @@ def run_experiment(cfg: RunConfig, *, out_dir: Path | None = None) -> dict:
         },
         out_dir / "models.pt",
     )
-    research_state_text = write_research_state(
+    # Per-run report only; scientific synthesis lives in notebook/diagnostics/agents.md.
+    write_research_state(
         out_dir=out_dir,
         cfg=cfg,
         derivative_source=reference["derivative_source"],
@@ -1029,7 +1030,6 @@ def run_experiment(cfg: RunConfig, *, out_dir: Path | None = None) -> dict:
         important_findings=important_findings,
         anomalies=anomalies,
     )
-    (Path("research_state.md")).write_text(research_state_text)
     return summary
 
 
