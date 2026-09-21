@@ -1,0 +1,17 @@
+{
+  "all_pass": true,
+  "phase23_artifacts_unchanged": true,
+  "rows": {
+    "outcomes": 125,
+    "histories": 125125,
+    "checkpoints": 5
+  },
+  "deterministic_reload": true,
+  "frozen_parameters_unchanged": true,
+  "seed_initialization_matches_phase23_with_float32_tolerance": true,
+  "coordinate_conversion_pass": true,
+  "max_coordinate_error": 2.221117901157754e-06,
+  "saved_summary_and_endpoint_consistency": true,
+  "initial_surrogate_and_symnet_match_phase23": true,
+  "initial_primitive_rms_matches_phase23": true
+}

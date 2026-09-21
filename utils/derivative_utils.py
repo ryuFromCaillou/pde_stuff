@@ -433,3 +433,35 @@ def evaluate_primitive_feature_metrics(
         "metrics_by_name": metrics_by_name,
         "summary_flat": summary_flat,
     }
+
+
+def evaluate_diagnostic_fields(model, t_flat, x_flat, grid_shape, feature_terms, chunk_size=4096):
+    """Physical primitives through FeatureTensor, plus time autodiff, in bounded chunks."""
+    columns = {name: [] for name in feature_terms}
+    temporal = []
+    for start in range(0, len(t_flat), chunk_size):
+        stop = start + chunk_size
+        part = evaluate_model_primitive_features(model, t_flat[start:stop], x_flat[start:stop], feature_terms)
+        for i, name in enumerate(part['feature_names']):
+            columns[name].append(part['values'][:, i])
+        t = torch.tensor(t_flat[start:stop], dtype=torch.float32).reshape(-1, 1).requires_grad_(True)
+        x = torch.tensor(x_flat[start:stop], dtype=torch.float32).reshape(-1, 1)
+        u = model(t, x)
+        temporal.append(torch.autograd.grad(u, t, torch.ones_like(u))[0].detach().numpy().ravel())
+    fields = {name: np.concatenate(parts).reshape(grid_shape) for name, parts in columns.items()}
+    fields['u_t'] = np.concatenate(temporal).reshape(grid_shape)
+    return fields
+
+
+def periodic_regularity_metrics(u_grid, x_grid, nu):
+    """Reference derivatives and per-time maxima; finite-difference and spectral cross-check."""
+    reference = build_burgers_reference_derivative_grids(u_grid=u_grid, x_grid=x_grid, nu=nu)
+    fields = {q: reference[q]['physical'] for q in ('u', 'u_x', 'u_xx', 'u_t')}
+    wave = 2 * np.pi * np.fft.fftfreq(len(x_grid), d=float(x_grid[1] - x_grid[0]))
+    fourier = np.fft.fft(u_grid, axis=1)
+    spectral = {name: np.fft.ifft(fourier * (1j * wave) ** order, axis=1).real
+                for name, order in [('u_x', 1), ('u_xx', 2)]}
+    rows = {f'max_abs_{name}': np.max(np.abs(fields[name]), axis=1) for name in spectral}
+    rows.update({f'spectral_max_abs_{name}': np.max(np.abs(value), axis=1)
+                 for name, value in spectral.items()})
+    return fields, rows

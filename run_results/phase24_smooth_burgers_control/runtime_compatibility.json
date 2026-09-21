@@ -1,0 +1,14 @@
+{
+  "original_notebook_model_matches_extracted_model_all_seeds": true,
+  "checkpoint": 1000,
+  "seed": 0,
+  "historical_final_loss": 0.0350290946662426,
+  "replayed_final_loss": 0.03502910956740379,
+  "max_abs_coefficient_difference": 6.340749683642066e-08,
+  "historical_loose_success": false,
+  "replayed_loose_success": false,
+  "historical_strong_success": false,
+  "replayed_strong_success": false,
+  "scope": "One terminal-state seed replay, not a complete historical experiment rerun; existing artifacts read only.",
+  "pass": true
+}

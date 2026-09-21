@@ -1,0 +1,142 @@
+{
+  "phase": 24,
+  "initial_condition": "0.5*sin(x)",
+  "domain": [
+    0.0,
+    6.283185307179586
+  ],
+  "nu": 0.02,
+  "T": 1.0,
+  "N": 256,
+  "dt": 0.002,
+  "Nt": 252,
+  "observations": 64512,
+  "checkpoints": [
+    0,
+    50,
+    200,
+    500,
+    1000
+  ],
+  "checkpoint_timing": "before labeled update",
+  "joint": {
+    "optimizer": "Adam",
+    "lr": 0.0005,
+    "epochs": 1000,
+    "batch_size": 4096,
+    "lambda_data": 1.0,
+    "lambda_pde": 0.5,
+    "seed": 19219,
+    "batch_seed": 19220,
+    "regularization": "none",
+    "batch_indexing": "0,0,1,...998; no terminal update"
+  },
+  "scale_estimator": {
+    "seed": 0,
+    "adam_lr": 0.001,
+    "adam_steps": 2500,
+    "lbfgs_max_iter": 200,
+    "batch_size": 4096,
+    "weights_transferred": false
+  },
+  "probe": {
+    "seeds": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24
+    ],
+    "optimizer": "Adam",
+    "lr": 0.01,
+    "epochs": 1000,
+    "objective": "full-grid PDE MSE against frozen surrogate u_t",
+    "loose": [
+      0.25,
+      0.02,
+      0.25
+    ],
+    "strong": [
+      0.1,
+      0.01,
+      0.1
+    ],
+    "scaling": "full-grid RMS recomputed per checkpoint; floor 1e-12"
+  },
+  "architecture": "SirenMLP(64,3,20,1) + original MinimalSymNet",
+  "primitive_features": [
+    "u",
+    "u_x",
+    "u_xx"
+  ],
+  "coefficient_order": [
+    "u",
+    "u_x",
+    "u_xx",
+    "u^2",
+    "u*u_x",
+    "u*u_xx",
+    "u_x^2",
+    "u_x*u_xx",
+    "u_xx^2"
+  ],
+  "reference_operators": "centered periodic differences, Burgers RHS; physical coordinates",
+  "differences_from_phase23": [
+    "sinusoidal initial condition replaces seed-0 random bumps",
+    "solution-dependent transferred RMS scales recomputed using identical estimator protocol",
+    "PyTorch runtime: 2.12.1+cu130 vs 2.14.0+cu130",
+    "fresh probe seeds use the same RNG protocol; initial coefficients checked at rtol 2e-5, atol 2e-7 because runtime uniform initialization rounds differently",
+    "canonical FeatureTensor evaluation replaces equivalent notebook-local primitive construction; numerical compatibility checked"
+  ],
+  "torch_version": "2.12.1+cu130",
+  "threads": 2,
+  "device": "cpu",
+  "dtype": "float32",
+  "git_parent": "8302d1bb2629ccf838b73870ea7da9a91429ad9a",
+  "phase23_inventory": {
+    "checkpoints/theta_epoch_0000.pt": "a2b50b597543ffa4fe8f5fb6135524a61113d708091d21727f23c70365ee1432",
+    "checkpoints/theta_epoch_0050.pt": "decd9df576ba96e6bc5a7734f295e3af3b7007591fe4aa82abca16a8a9618413",
+    "checkpoints/theta_epoch_0200.pt": "f40f2e6f3f03820d83c9de225f2a099b308b7e94caba529ef595bfb63d88093d",
+    "checkpoints/theta_epoch_0500.pt": "0668b19574ad1691dad6a80cc26ddda1d7305bc6446412d9a7a63157f16de1f0",
+    "checkpoints/theta_epoch_1000.pt": "6d6fe6483abd582ea8269a9fa8b20d80605edd543cc37c74b79c436be036be35",
+    "coefficient_distribution.csv": "fd08973ed261377909cb1c23f8363d0dd2924b2ae274f927de556ea0a087f3a1",
+    "config.json": "ab5751181e9d0d288c8c175859929ff3ce2308bb95fec923dac16a7fe3ccfb66",
+    "frozen_surrogate_metrics.csv": "91d735b6effaf9202c227cc541d2839e00afe0f0736a8e11beea81d0ddc77bb5",
+    "joint_checkpoint_metrics.csv": "52615de0d3aa3d524374628bd5b02e75a578fff02b27a782136da61d45cc5ca7",
+    "joint_reproduction_validation.json": "f1d2eb0032f5f35915024fd4cf801237bb5316ba8d5c8096a32b3208ff2612f5",
+    "per_seed_histories.csv": "c3266805770181f02e95b284da9ff17069501956f1235f5617f14c07ee0a1fab",
+    "per_seed_results.csv": "cfa2de2955ff446360183729b3cefd34bde2427174df21f8a5020fdf7ece12d4",
+    "phase18_protocol.json": "718bed33b506d441b54a9297a6a5ec908c9e3b7aa709cdd801adfa44b7384678",
+    "phase18_protocol_source.py.txt": "0f75cff7568f90a70d0147b7899f4af43e947863c975df4af47cc7b348873e30",
+    "recoverability_by_checkpoint.csv": "94c235678deb05120730b180e8db88ee8d9c627da3166149511add1acaf2f9f5",
+    "status.json": "901de7d1cb14c7a555adcdbb30e1d3c8947c5f432766e6d553e0dbef71ae8572"
+  },
+  "phase22_inputs_sha256": "a8a1274d0730e66a102325841542888abd237c681bd16fe8e6764ac61e4166e4",
+  "runtime_initialization_max_abs_difference": 2.9802322387695312e-08,
+  "joint_initialization": "exact archived tensors loaded; seeded regeneration differs by float32 rounding",
+  "transferred_scales": [
+    0.3498518168926239,
+    0.37613674998283386,
+    4.194288730621338
+  ]
+}

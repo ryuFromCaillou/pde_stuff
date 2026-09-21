@@ -29,21 +29,33 @@ def solve_burgers(
     T=1.0,
     seed=0,
     return_history=False,
+    initial_condition=None,
+    history_every=None,
 ):
+    """Periodic RK4 rollout; optional callable initial condition and save cadence.
+
+    Defaults retain the historical random-bump rollout and observation times.
+    ``history_every=1`` exposes every solver step for regularity diagnostics.
+    """
     rng = np.random.default_rng(seed)
 
     x = np.linspace(0.0, L, N, endpoint=False)
     dx = L / N
 
-    centers = rng.uniform(0.0, L, size=5)
-    heights = rng.uniform(0.5, 2.0, size=5)
-    widths  = rng.uniform(0.05 * L, 0.25 * L, size=5)
+    if initial_condition is None:
+        centers = rng.uniform(0.0, L, size=5)
+        heights = rng.uniform(0.5, 2.0, size=5)
+        widths  = rng.uniform(0.05 * L, 0.25 * L, size=5)
 
-    u = np.zeros_like(x)
-    for c, a, s in zip(centers, heights, widths):
-        dx_wrap = np.minimum(np.abs(x - c), L - np.abs(x - c))
-        u += a * np.exp(-0.5 * (dx_wrap / s) ** 2)
-    u -= np.mean(u)
+        u = np.zeros_like(x)
+        for c, a, s in zip(centers, heights, widths):
+            dx_wrap = np.minimum(np.abs(x - c), L - np.abs(x - c))
+            u += a * np.exp(-0.5 * (dx_wrap / s) ** 2)
+        u -= np.mean(u)
+    else:
+        u = np.asarray(initial_condition(x), dtype=float).copy()
+        if u.shape != x.shape or not np.isfinite(u).all():
+            raise ValueError("initial_condition must return finite values on the spatial grid")
 
     def dudx(u):
         return (np.roll(u, -1) - np.roll(u, 1)) / (2.0 * dx)
@@ -61,6 +73,9 @@ def solve_burgers(
         history_u = [u.copy()]
 
     nsteps = int(np.round(T / dt))
+    save_every = max(1, nsteps // 200) if history_every is None else int(history_every)
+    if save_every < 1:
+        raise ValueError("history_every must be positive")
     for n in range(nsteps):
         k1 = rhs(u)
         k2 = rhs(u + 0.5 * dt * k1)
@@ -69,7 +84,7 @@ def solve_burgers(
         u = u + (dt / 6.0) * (k1 + 2*k2 + 2*k3 + k4)
         t += dt
 
-        if return_history and (n % max(1, nsteps // 200) == 0 or n == nsteps - 1):
+        if return_history and (n % save_every == 0 or n == nsteps - 1):
             history_t.append(t)
             history_u.append(u.copy())
 

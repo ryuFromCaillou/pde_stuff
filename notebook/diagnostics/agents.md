@@ -3,19 +3,21 @@
 ## CURRENT RESEARCH STATE
 
 ### Current scientific objective
-Determine why Burgers discovery with a SIREN surrogate and `MinimalSymNet` fails to recover transport reliably during joint training, and whether a matched smooth solution improves derivative fidelity and symbolic recovery while preserving the PDE and discovery pipeline.
+Determine which upstream surrogate and trajectory effects prevent reliable Burgers transport recovery after solution regularity is controlled. Phase 24 completed the matched smooth-Burgers control; the next work should separate data-only surrogate fidelity from joint-training deformation on that smooth trajectory.
 
 ### Current working hypothesis
-The shock / sharp-gradient regime is a major source of derivative and symbolic-recovery difficulty. The largest remaining derivative concern is sharp second-derivative structure in the shock-forming solution. **This is a working hypothesis, not proven causality:** the saved global errors do not establish shock-localized failure. Here “shock” means a steep viscous front at `nu=0.02`, not a demonstrated discontinuity. A smooth control and shock-localization controls are still needed.
+The shock / sharp-gradient regime materially worsens derivative fidelity, but it is not sufficient to explain symbolic failure. Phase 24 shows that a smooth solution improves spatial derivative errors and moves recovered coefficients toward Burgers, while matched frozen probes still fail. The remaining leading hypothesis is surrogate/joint-training fidelity and trajectory conditioning, with shock effects as a contributing factor rather than a sole cause.
 
 ### Current established findings
 - Feature scaling substantially improves frozen-surrogate SymNet optimization: Phase 18 achieved loose recovery in 25/25 scaled versus 0/25 unscaled seeds; neither achieved strong recovery. This result concerns the data-only fitted frozen surrogate.
 - Joint training still fails to recover the transport coefficient reliably under the tested pretrained, transferred-scale, and loss-weight controls. Low field error or PDE residual alone is insufficient evidence of discovery.
 - Phases 20–21 characterized gradient conflict and Adam update geometry. Phase 22 retained poor recovery under plain SGD, despite updates aligned with the negative total gradient. Neither conflict nor Adam geometry is established as the primary cause.
 - Phase 23 froze the joint surrogate at epochs `0, 50, 200, 500, 1000` and trained 25 fresh scaled SymNet probes at each checkpoint: **0/25 loose recoveries at every checkpoint**. Field MSE improved from `2.166942` to `0.031030`; `u_xx` MSE decreased from `16181.68` to `2646.87` but remained large. This tests stationary-state recoverability, not whether the original joint SymNet tracked a moving solution.
+- Phase 24 used `u(x,0)=0.5 sin(x)` with the same PDE, `nu=0.02`, domain, horizon, grid, joint controls, checkpoints, and 25-seed frozen-probe protocol. Quantitative smoothness verification gave global `max|u_x|=0.927793` and `max|u_xx|=1.228666`, versus `29.499847` and `757.666568` for the shock-forming rollout; refined-grid solution discrepancy was `1.51e-5`.
+- Phase 24 still produced **0/25 loose and 0/25 strong recoveries at every checkpoint**. At epoch 1000, smooth surrogate errors were `u=0.168824`, `u_x=0.978805`, `u_xx=299.714`, `u_t=4.430536`, compared with Phase 23 `0.031030`, `3.112945`, `2646.867`, `0.860947`. Spatial derivative errors improved greatly, median transport moved from `+0.056676` to `-0.629130`, and median coefficient error improved from `1.125248` to `0.886466`, but spurious terms remained high (`0.805139` median) and transport remained outside the loose threshold. Exact-reference least squares recovered Burgers to `1.36e-15`, so reference feature excitation is adequate.
 
 ### Current unresolved questions
-Does removing steep-front formation improve recovery? Are derivative errors concentrated near sharp fronts, or also elsewhere? How much comes from surrogate fitting, reference discretization, insufficient feature excitation, or symbolic optimization? Raw MSEs of different derivatives have different scales; their magnitudes alone do not establish causality. Phase 14's isolated reference-`u_xx` substitution did not rescue the earlier unscaled random-start setup.
+How much of the remaining smooth-control failure comes from data-only surrogate fitting versus joint-training deformation? Can a smoother/high-fidelity surrogate support recovery when frozen, and are errors localized in time or space? How much comes from reference discretization or symbolic optimization? Raw MSEs have different scales; their magnitudes alone do not establish causality.
 
 ### Current experimental pipeline
 Clean periodic Burgers rollout → SIREN field fit / matched joint SIREN–MinimalSymNet trajectory → physical-coordinate autodiff primitives `[u, u_x, u_xx]` and target `u_t` → detached RMS feature scaling → fresh frozen SymNet probes → physical polynomial coefficients, derivative metrics, and predeclared recovery counts. Use the active feature library and canonical derivative helpers; retain dataset-specific reference operators and distinguish primitive metrics from the expanded nine-term symbolic library.
@@ -27,15 +29,16 @@ Clean periodic Burgers rollout → SIREN field fit / matched joint SIREN–Minim
 - Match seeds, initialization, sampling, budgets, coefficient extraction and criteria across controls; ground truth is for evaluation. Preserve existing artifacts and distinguish single-trajectory evidence from multi-seed surrogate reliability.
 
 ### Current next experiment
-**Matched smooth-Burgers control (planned, not yet executed):** choose and visibly define a smooth periodic initial condition that does not develop a steep shock-like front over the observation horizon. Preserve the PDE, viscosity, domain, horizon, resolution, SIREN/MinimalSymNet architecture, scaling procedure, training budgets, sampling, seeds, and recovery criteria; change solution regularity through the initial condition. Recompute solution-dependent scales with the same procedure. Verify smoothness throughout the rollout and adequate feature excitation. Compare field/derivative errors and frozen/joint recovery against the existing steep-front case. Follow with predeclared shock-localized versus non-shock error/recovery controls before assigning causal responsibility.
+Compare data-only pretrained and matched joint-trained SIRENs on the Phase 24 smooth data, then run the same frozen SymNet probes from both trajectories. Keep the PDE, feature library, scaling, seeds, checkpoint timing, and recovery criteria fixed. This isolates whether smooth-data symbolic failure is caused primarily by surrogate approximation or by joint-training trajectory deformation. Follow with spatial/time localization of derivative and feature errors before assigning causal responsibility to shocks.
 
 ### Important files and artifact locations
-- Scientific narrative and visible analysis: `notebook/diagnostics/burgers_minimal_discovery_story.ipynb` (latest completed phase: 23).
+- Scientific narrative and visible analysis: `notebook/diagnostics/burgers_minimal_discovery_story.ipynb` (latest completed phase: 24).
 - Canonical scientific state: `notebook/diagnostics/agents.md`; local instructions: `notebook/diagnostics/AGENTS.md`.
 - Dataset / reference implementation: `Datasets/data/processed/burg_gen/burg_gen.py`, `utils/derivative_utils.py`; feature definitions: `prog/featlib.py`.
 - Frozen scaling evidence: `run_results/phase18_feature_scaling_reliability/`; weight grid: `run_results/phase19b_ii_loss_weight_grid/`.
 - Geometry / optimizer controls: `run_results/phase20_gradient_analysis/`, `run_results/phase21_surrogate_update_geometry/`, `run_results/phase22_sgd_control/` (including `matched_inputs.pt`).
 - Recoverability execution: `runs/run_phase23_recoverability.py`; artifacts: `run_results/phase23_joint_trajectory_recoverability/`, especially `config.json`, `joint_reproduction_validation.json`, `recoverability_by_checkpoint.csv`, `frozen_surrogate_metrics.csv`, `per_seed_results.csv`, `per_seed_histories.csv`, and `checkpoints/`.
+- Phase 24 execution: `runs/run_phase24_smooth_burgers_control.py`, reusable implementation `utils/burgers_recoverability.py`, output contract `runs/PHASE24.md`; artifacts: `run_results/phase24_smooth_burgers_control/`, including `smoothness.json`, `frozen_surrogate_metrics.csv`, `recoverability_by_checkpoint.csv`, `phase23_comparison.csv`, `per_seed_results.csv`, `per_seed_histories.csv`, `validation.json`, and `manifest.json`.
 
 ## Research execution conventions
 
@@ -231,3 +234,19 @@ Strong recovery was also zero at every checkpoint. Frozen-probe PDE loss fell fr
 ### Post-Phase-23 planning — Smooth control and shock hypothesis
 
 The derivative record motivates testing solution regularity: Phase 3 showed particularly poor second-derivative-containing features, and Phase 23 retained large second-derivative error despite improving field fit. The shock / sharp-gradient explanation is a proposed mechanism, not a measured causal result of Phase 23. The next experiment is the matched smooth-Burgers control described above, followed by shock-localization controls. Preserve the earlier derivative-substitution and scaling findings when interpreting this test.
+
+### Phase 24 — Smooth Burgers recoverability control
+
+Phase 24 tested `u(x,0)=0.5 sin(x)` on `[0,2*pi)` with `nu=0.02`, `T=1`, `N=256`, and the unchanged RK4 step `dt=0.002`. The inviscid crossing-time motivation was `2>T`; quantitative checks across all 501 solver states confirmed global `max|u_x|=0.927793` and `max|u_xx|=1.228666`. Spectral maxima were `0.928399` and `1.229307`; a 512-point, `dt=0.001` verification rollout differed by at most `1.51104e-5`. The shock-forming baseline reached `29.499847` and `757.666568`, respectively. The smooth reference nine-term library had rank 9 and exact-reference least-squares coefficient error `1.36e-15`.
+
+The matched joint trajectory loaded the exact archived Phase 23 initialization and batches, used the same SIREN/MinimalSymNet architecture, Adam `5e-4`, loss weights `(1,0.5)`, 1,000 updates, batch size 4096, checkpoints `0,50,200,500,1000`, and pre-update timing. A Phase-19B-style scale estimator recomputed smooth-data RMS scales; its weights were discarded. Fresh scaled probes used seeds 0–24, Adam `1e-2`, 1,000 full-grid PDE-MSE updates, and the Phase 18 loose/strong criteria. Runtime compatibility against the original notebook model and one saved Phase 23 terminal probe passed; all previous Phase 23 artifacts were hash-verified unchanged.
+
+| checkpoint | u MSE | u_x MSE | u_xx MSE | u_t MSE | loose | strong | median coefficient error | mean +/- SD | median transport | median diffusion | median spurious L2 |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 0 | 1.428979 | 63.482999 | 13252.478 | 76.657994 | 0/25 | 0/25 | 1.125248 | 1.125248 +/- 0.0000004 | 0.056676 | 0.001558 | 0.386366 |
+| 50 | 0.464016 | 9.860789 | 2297.339 | 25.558847 | 0/25 | 0/25 | 1.001003 | 1.001003 +/- 0.0000004 | -0.021459 | 0.002175 | 0.210112 |
+| 200 | 0.278058 | 3.884914 | 953.604 | 14.182045 | 0/25 | 0/25 | 0.943015 | 0.943015 +/- 0.0000005 | -0.118128 | 0.004660 | 0.333683 |
+| 500 | 0.196465 | 1.820562 | 493.959 | 8.110692 | 0/25 | 0/25 | 0.849777 | 0.849777 +/- 0.0000004 | -0.327623 | 0.008329 | 0.519513 |
+| 1000 | 0.168824 | 0.978805 | 299.714 | 4.430536 | 0/25 | 0/25 | 0.886466 | 0.886466 +/- 0.0000003 | -0.629130 | 0.014596 | 0.805139 |
+
+Interpretation: smoothing materially improved spatial derivative errors and moved transport/diffusion toward the Burgers targets, but it did not produce a loose or strong symbolic recovery. The shock hypothesis is weakened as a sufficient explanation, not eliminated as a contributing factor. The smooth joint surrogate still had poor `u_xx` and `u_t` fidelity, and learned-derivative least squares retained spurious terms. The next upstream control is to compare data-only and joint-trained smooth surrogates under the same frozen-probe protocol, then localize derivative/feature errors. This single smooth trajectory and single matched joint initialization do not establish a sole causal mechanism.

@@ -1,0 +1,42 @@
+{
+  "initial_condition": "0.5*sin(x)",
+  "amplitude": 0.5,
+  "wavenumber": 1.0,
+  "inviscid_crossing_time": 2.0,
+  "horizon": 1.0,
+  "nu": 0.02,
+  "solver_steps_checked": 501,
+  "Nx": 256,
+  "Nt": 252,
+  "observations": 64512,
+  "global_maxima": {
+    "smooth": {
+      "max_abs_u_x": 0.9277926616130169,
+      "max_abs_u_xx": 1.2286663136917855,
+      "spectral_max_abs_u_x": 0.9283994817596318,
+      "spectral_max_abs_u_xx": 1.2293068932101323
+    },
+    "shock": {
+      "max_abs_u_x": 29.49984724244515,
+      "max_abs_u_xx": 757.6665679164743,
+      "spectral_max_abs_u_x": 34.63456343144942,
+      "spectral_max_abs_u_xx": 945.6540527265778
+    }
+  },
+  "refined_global_maxima": {
+    "max_abs_u_x": 0.9283666758136656,
+    "max_abs_u_xx": 1.2292734437105146,
+    "spectral_max_abs_u_x": 0.9285186902743555,
+    "spectral_max_abs_u_xx": 1.2294333450352033
+  },
+  "refinement_max_abs_u": 1.5110418096264677e-05,
+  "verification_bounds": {
+    "max_abs_ux": 1.1,
+    "max_abs_uxx": 2.0,
+    "refinement_max_abs_u": 0.001
+  },
+  "bounds_basis": "Predeclared conservative smooth-regime bounds, not recovery-based tuning; A*k*T=.5.",
+  "physical_coordinates_match_phase23": true,
+  "historical_solver_default_unchanged": true,
+  "smoothness_pass": true
+}
