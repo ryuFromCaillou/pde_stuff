@@ -16,7 +16,8 @@ def save_plots(out):
             ax.plot(g.time,g['max_abs_'+name],label=regime)
             ax.set(xlabel='physical time',ylabel=f'max |{name}|',yscale='log')
             ax.legend()
-    fig.tight_layout(); fig.savefig(out/'smoothness.pdf'); fig.savefig(out/'smoothness.png',dpi=140); plt.close(fig)
+    fig.suptitle('Burgers solution regularity: maximum derivative magnitude', fontsize=13)
+    fig.tight_layout(rect=(0, 0, 1, 0.94)); fig.savefig(out/'smoothness.pdf'); fig.savefig(out/'smoothness.png',dpi=140); plt.close(fig)
     refs=np.load(out/'reference_fields.npz')
     # Learned/reference primitive overlays use the repository's canonical helper.
     import torch
@@ -37,14 +38,14 @@ def save_plots(out):
         for col,i in enumerate(indices):
             ax=axes[row,col]; ax.plot(refs['x'],refs[name][i],label='smooth reference')
             ax.set(title=f't={refs["t"][i]:.3f}',xlabel='physical x',ylabel=name)
-    axes[0,0].legend(fontsize=7); fig.tight_layout(); fig.savefig(out/'solution_derivative_slices.pdf'); fig.savefig(out/'solution_derivative_slices.png',dpi=140); plt.close(fig)
+    axes[0,0].legend(fontsize=7); fig.suptitle('Smooth Burgers solution and derivative slices', fontsize=13); fig.tight_layout(rect=(0, 0, 1, 0.94)); fig.savefig(out/'solution_derivative_slices.pdf'); fig.savefig(out/'solution_derivative_slices.png',dpi=140); plt.close(fig)
     fig,axes=plt.subplots(3,5,figsize=(16,8))
     for row,name in enumerate(['u','u_x','u_xx']):
         for col,i in enumerate(indices):
             ax=axes[row,col]; ax.plot(refs['x'],refs[name][i],label='smooth')
             ax.plot(refs['x'],refs['shock_'+name][i],label='shock-forming')
             ax.set(title=f't={refs["t"][i]:.3f}',xlabel='physical x',ylabel=name)
-    axes[0,0].legend(fontsize=7); fig.tight_layout(); fig.savefig(out/'reference_regime_slices.pdf'); fig.savefig(out/'reference_regime_slices.png',dpi=140); plt.close(fig)
+    axes[0,0].legend(fontsize=7); fig.suptitle('Smooth versus shock-forming Burgers reference fields', fontsize=13); fig.tight_layout(rect=(0, 0, 1, 0.94)); fig.savefig(out/'reference_regime_slices.pdf'); fig.savefig(out/'reference_regime_slices.png',dpi=140); plt.close(fig)
     comparison=pd.read_csv(out/'phase23_comparison.csv')
     fig,axes=plt.subplots(2,3,figsize=(13,7))
     for regime,g in comparison.groupby('regime'):
@@ -55,4 +56,4 @@ def save_plots(out):
             if key in ['u','u_x','u_xx','coefficient_error_median']: ax.set_yscale('log')
             ax.legend()
     axes[0,0].set_ylim(-.03,1.03); axes[0,1].set_ylim(-.5,25.5)
-    fig.tight_layout(); fig.savefig(out/'phase23_comparison.pdf'); fig.savefig(out/'phase23_comparison.png',dpi=140); plt.close(fig)
+    fig.suptitle('Phase 23 versus Phase 24 frozen-surrogate comparison', fontsize=13); fig.tight_layout(rect=(0, 0, 1, 0.94)); fig.savefig(out/'phase23_comparison.pdf'); fig.savefig(out/'phase23_comparison.png',dpi=140); plt.close(fig)

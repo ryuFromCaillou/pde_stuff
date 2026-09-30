@@ -1019,7 +1019,7 @@ def run_experiment(cfg: RunConfig, *, out_dir: Path | None = None) -> dict:
         },
         out_dir / "models.pt",
     )
-    # Per-run report only; scientific synthesis lives in notebook/diagnostics/agents.md.
+    # Per-run report only; scientific synthesis lives in notebook/diagnostics/RESEARCH_STATE.md.
     write_research_state(
         out_dir=out_dir,
         cfg=cfg,

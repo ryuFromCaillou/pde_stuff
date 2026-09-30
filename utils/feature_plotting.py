@@ -186,12 +186,13 @@ def save_time_slice_snapshots(
                 alpha=0.6,
                 zorder=3,
             )
-        ax.set_title(f"{value_name} at t={float(t_grid[time_idx]):.6g}")
+        fig.suptitle(f"{value_name} comparison across a physical time slice", fontsize=13)
+        ax.set_title(f"t={float(t_grid[time_idx]):.6g}")
         ax.set_xlabel("x")
         ax.set_ylabel(value_name)
         ax.grid(True, alpha=0.25)
         ax.legend()
-        fig.tight_layout()
+        fig.tight_layout(rect=(0, 0, 1, 0.94))
         filename = f"{primitive_feature_name_to_key(value_name)}_tidx_{int(time_idx):03d}.pdf"
         saved_paths.append(savefig_atomic(fig, output_dir / filename))
 

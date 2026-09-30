@@ -33,7 +33,7 @@ Compare data-only pretrained and matched joint-trained SIRENs on the Phase 24 sm
 
 ### Important files and artifact locations
 - Scientific narrative and visible analysis: `notebook/diagnostics/burgers_minimal_discovery_story.ipynb` (latest completed phase: 24).
-- Canonical scientific state: `notebook/diagnostics/agents.md`; local instructions: `notebook/diagnostics/AGENTS.md`.
+- Canonical scientific state: `notebook/diagnostics/RESEARCH_STATE.md`; local instructions: `notebook/diagnostics/AGENTS.md`.
 - Dataset / reference implementation: `Datasets/data/processed/burg_gen/burg_gen.py`, `utils/derivative_utils.py`; feature definitions: `prog/featlib.py`.
 - Frozen scaling evidence: `run_results/phase18_feature_scaling_reliability/`; weight grid: `run_results/phase19b_ii_loss_weight_grid/`.
 - Geometry / optimizer controls: `run_results/phase20_gradient_analysis/`, `run_results/phase21_surrogate_update_geometry/`, `run_results/phase22_sgd_control/` (including `matched_inputs.pt`).

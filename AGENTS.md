@@ -34,14 +34,16 @@ When adding outputs, update the corresponding run documentation and summary cont
 
 For any task involving `notebook/diagnostics/`, a new diagnostic phase, Burgers discovery interpretation, or experiment design based on previous phases, the agent MUST first read:
 
-1. `notebook/diagnostics/agents.md`
+1. `notebook/diagnostics/RESEARCH_STATE.md`
 2. The latest relevant section of `notebook/diagnostics/burgers_minimal_discovery_story.ipynb`.
 
 Reconcile the planned experiment against the current research state before writing or running code.
 
-- Treat `notebook/diagnostics/agents.md` as the canonical research-state file for diagnostic work.
+`notebook/diagnostics/AGENTS.md` governs diagnostic execution and notebook storytelling; consult it for the local code-visibility and figure-title rules.
+
+- Treat `notebook/diagnostics/RESEARCH_STATE.md` as the canonical research-state file for diagnostic work.
 - Do not rely solely on older phase descriptions when it contains a newer current-state statement.
-- When a diagnostic phase materially changes the scientific interpretation, update `notebook/diagnostics/agents.md` in the same change.
+- When a diagnostic phase materially changes the scientific interpretation, update `notebook/diagnostics/RESEARCH_STATE.md` in the same change.
 - Keep the current-state section concise; append detailed findings to the historical record.
 
 | Task type | Start here |

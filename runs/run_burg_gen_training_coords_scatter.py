@@ -34,18 +34,18 @@ def _extract_json_block(markdown_text: str) -> dict:
     end_token = "```"
     start = markdown_text.find(start_token)
     if start < 0:
-        raise ValueError("Could not find JSON config block in notebook/diagnostics/agents.md")
+        raise ValueError("Could not find JSON config block in notebook/diagnostics/RESEARCH_STATE.md")
     start += len(start_token)
     end = markdown_text.find(end_token, start)
     if end < 0:
-        raise ValueError("Could not find end of JSON config block in notebook/diagnostics/agents.md")
+        raise ValueError("Could not find end of JSON config block in notebook/diagnostics/RESEARCH_STATE.md")
     return json.loads(markdown_text[start:end].strip())
 
 
 def load_active_scatter_config() -> ScatterConfig:
     # Reproduce the historical September 2 sampling config preserved in this file.
     # This is not the active configuration of later diagnostic phases.
-    research_state_path = ROOT / "notebook" / "diagnostics" / "agents.md"
+    research_state_path = ROOT / "notebook" / "diagnostics" / "RESEARCH_STATE.md"
     if research_state_path.exists():
         baseline = research_state_path.read_text().split(
             "### September 2, 2026 — Baseline derivative-fidelity diagnostic", 1
