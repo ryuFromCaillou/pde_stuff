@@ -1,0 +1,41 @@
+{
+  "phase": "Phase 24 scale-gradient diagnostic",
+  "matched_input": "run_results/phase22_sgd_control/matched_inputs.pt",
+  "phase24_scales": [
+    0.3498518168926239,
+    0.37613674998283386,
+    4.194288730621338
+  ],
+  "phase23_scales": [
+    0.8564476370811462,
+    2.418001890182495,
+    49.38141632080078
+  ],
+  "unit_scales": [
+    1.0,
+    1.0,
+    1.0
+  ],
+  "conditions": [
+    "phase24_smooth",
+    "phase23_transferred",
+    "unit_unscaled",
+    "p23_u_from_p24",
+    "p23_ux_from_p24",
+    "p23_uxx_from_p24"
+  ],
+  "checkpoints": [
+    0,
+    10,
+    50,
+    100,
+    200
+  ],
+  "horizon": 200,
+  "lambda_data": 1.0,
+  "lambda_pde": 0.5,
+  "learning_rate": 0.0005,
+  "phase24_config_sha256": "9c16ab5c98e08aa4338a5b32a74cfb0b847ed767bed2702115b0e3033a274b77",
+  "phase23_config_sha256": "ab5751181e9d0d288c8c175859929ff3ce2308bb95fec923dac16a7fe3ccfb66",
+  "no_phase23_phase24_overwrite": true
+}
