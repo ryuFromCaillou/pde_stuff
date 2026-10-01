@@ -1,0 +1,8 @@
+{
+  "status": "complete",
+  "steps": 100000,
+  "first_loose_step": 8853,
+  "first_strong_step": 10013,
+  "original_artifacts_preserved": true,
+  "later_phases_unchanged": true
+}

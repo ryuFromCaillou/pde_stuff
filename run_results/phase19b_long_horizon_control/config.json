@@ -1,0 +1,44 @@
+{
+  "phase": "Phase 19B long-horizon joint-training control",
+  "steps": 100000,
+  "clock": "one optimizer.step() per outer-loop iteration; batch 0 reused at steps 0 and 1",
+  "architecture": "SirenMLP(64,3,20,1)+MinimalSymNet",
+  "optimizer": "Adam",
+  "learning_rate": 0.0005,
+  "lambda_data": 1.0,
+  "lambda_pde": 0.5,
+  "batch_size": 4096,
+  "initialization_seed": 19219,
+  "batch_seed": 19220,
+  "scales": [
+    0.8564476370811462,
+    2.418001890182495,
+    49.38141632080078
+  ],
+  "checkpoints": [
+    0,
+    50,
+    200,
+    500,
+    1000,
+    2000,
+    5000,
+    10000,
+    20000,
+    50000,
+    100000
+  ],
+  "recovery_criteria": {
+    "loose": {
+      "transport": 0.25,
+      "diffusion": 0.02,
+      "spurious_l2": 0.25
+    },
+    "strong": {
+      "transport": 0.1,
+      "diffusion": 0.01,
+      "spurious_l2": 0.1
+    }
+  },
+  "source_matched_inputs": "run_results/phase22_sgd_control/matched_inputs.pt"
+}
