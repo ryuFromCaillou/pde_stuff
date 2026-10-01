@@ -10,7 +10,40 @@
 
 ## Notebook code visibility
 
-Show code when the implementation itself develops the scientific story. Notebook code is appropriate when seeing the implementation helps the reader understand an important scientific operation, transformation, assumption, or diagnostic. An interesting function is one whose implementation materially explains how the experiment works or why its evidence should be interpreted a certain way.
+Show code that explains scientific mechanisms and experimental invariants. Notebook code is appropriate when seeing the implementation helps the reader understand an important scientific operation, transformation, assumption, or diagnostic. An interesting function is one whose implementation materially explains how the experiment works or why its evidence should be interpreted a certain way.
+
+### Scientific mechanism code — show
+
+Show the smallest faithful excerpt when its implementation exposes an important operation or invariant, such as:
+
+- computing and detaching feature scales;
+- applying fixed scales to `[u, u_x, u_xx]`;
+- discarding scale-estimator weights;
+- cloning identical SIREN and SymNet states across treatments;
+- supplying those states and scales to training;
+- derivative construction;
+- physical coefficient conversion;
+- gradient diagnostics; and
+- recovery criteria.
+
+The goal is to expose the scientific dataflow, not the machinery used to execute every treatment. Identify the canonical repository location and function or class whenever one exists.
+
+### Evidence-presentation code — show sparingly
+
+Short code for loading artifacts, selecting meaningful result columns, or constructing the figure or table under discussion is acceptable. Keep it minimal.
+
+### Experiment execution code — normally hide
+
+Do not display code whose primary purpose is epoch or training loops, parameter-sweep loops, optimizer stepping, repeated model construction, batch scheduling, checkpoint orchestration, filesystem setup, serialization, repeated metric collection, or device and boilerplate handling. Keep that code in `runs/`, `utils/`, or other canonical implementation files.
+
+Before showing code, ask: **What scientific fact becomes easier to understand by seeing this implementation?** If the answer is merely “this runs, trains, sweeps, or saves the experiment,” keep it outside the notebook. If the answer is “this shows how scale transfer works,” “this proves weights are discarded,” or “this establishes matched initialization,” show the smallest faithful excerpt.
+
+Two notebook styles are allowed:
+
+1. **Small self-contained diagnostic:** a complete implementation may remain when the code itself is concise and explanatory.
+2. **Artifact-backed diagnostic:** substantial experiments run externally; the notebook shows the question, design, relevant mechanism code, implementation location, evidence, and interpretation.
+
+Avoid a hybrid that copies a large external-style runner into a notebook cell.
 
 Examples include concise code for constructing and applying feature scales, obtaining `u_x`, `u_xx`, or `u_t`, forming scientifically meaningful candidate features, extracting or converting physical coefficients, and implementing a diagnostic transformation or comparison that is itself part of the reasoning. Expose the smallest useful piece and prefer calling the canonical repository implementation over duplicating substantial logic.
 
