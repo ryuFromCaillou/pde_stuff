@@ -1,0 +1,429 @@
+[
+  {
+    "event": "u_t_rel_l2",
+    "criterion": "10% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 7900,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "u_t_rel_l2",
+    "criterion": "25% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 8250,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "u_t_rel_l2",
+    "criterion": "50% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 8525,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "u_t_rel_l2",
+    "criterion": "75% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 8825,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "u_t_rel_l2",
+    "criterion": "90% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 9275,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "u_t_cosine",
+    "criterion": "10% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 7500,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "u_t_cosine",
+    "criterion": "25% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 7850,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "u_t_cosine",
+    "criterion": "50% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 8200,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "u_t_cosine",
+    "criterion": "75% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 8500,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "u_t_cosine",
+    "criterion": "90% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 8775,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "u_x_rel_l2",
+    "criterion": "10% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 7750,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "u_x_rel_l2",
+    "criterion": "25% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 8125,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "u_x_rel_l2",
+    "criterion": "50% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 8400,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "u_x_rel_l2",
+    "criterion": "75% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 8675,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "u_x_rel_l2",
+    "criterion": "90% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 9075,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "u_xx_rel_l2",
+    "criterion": "10% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 7675,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "u_xx_rel_l2",
+    "criterion": "25% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 8050,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "u_xx_rel_l2",
+    "criterion": "50% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 8350,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "u_xx_rel_l2",
+    "criterion": "75% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 8675,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "u_xx_rel_l2",
+    "criterion": "90% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 9400,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "transport_rel_l2",
+    "criterion": "10% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 7850,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "transport_rel_l2",
+    "criterion": "25% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 8225,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "transport_rel_l2",
+    "criterion": "50% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 8475,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "transport_rel_l2",
+    "criterion": "75% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 8775,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "transport_rel_l2",
+    "criterion": "90% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 9225,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "rhs_rel_l2",
+    "criterion": "10% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 7975,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "rhs_rel_l2",
+    "criterion": "25% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 8325,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "rhs_rel_l2",
+    "criterion": "50% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 8550,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "rhs_rel_l2",
+    "criterion": "75% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 8850,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "rhs_rel_l2",
+    "criterion": "90% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 9350,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "rhs_cancellation_ratio",
+    "criterion": "10% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 8475,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "rhs_cancellation_ratio",
+    "criterion": "25% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 8575,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "rhs_cancellation_ratio",
+    "criterion": "50% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 8775,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "rhs_cancellation_ratio",
+    "criterion": "75% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 9100,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "rhs_cancellation_ratio",
+    "criterion": "90% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 9600,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "xi_u*u_x",
+    "criterion": "10% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 7800,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "xi_u*u_x",
+    "criterion": "25% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 8150,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "xi_u*u_x",
+    "criterion": "50% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 8425,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "xi_u*u_x",
+    "criterion": "75% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 8750,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "xi_u*u_x",
+    "criterion": "90% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 9300,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "xi_u_xx",
+    "criterion": "10% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 7775,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "xi_u_xx",
+    "criterion": "25% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 8225,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "xi_u_xx",
+    "criterion": "50% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 8675,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "xi_u_xx",
+    "criterion": "75% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 9200,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "xi_u_xx",
+    "criterion": "90% of net 7000-to-10500 change; sustained 100 steps",
+    "step": 9800,
+    "status": "sustained at least 100 steps",
+    "series": "fixed evaluation"
+  },
+  {
+    "event": "gradient_alignment",
+    "criterion": "first nonnegative data/PDE cosine sustained 100 steps; fixed sample primary",
+    "step": 9625,
+    "status": "sustained at least 100 steps",
+    "series": "fixed 4096-point gradients; actual training update"
+  },
+  {
+    "event": "weighted_gradient_ratio",
+    "criterion": "first weighted PDE/data norm ratio <=1 sustained 100 steps",
+    "step": null,
+    "status": "unresolved / not met",
+    "series": "fixed 4096-point gradients; actual training update"
+  },
+  {
+    "event": "update_aligned_both_losses",
+    "criterion": "first update cosine with -data and -PDE both nonnegative sustained 100 steps",
+    "step": 7825,
+    "status": "sustained at least 100 steps",
+    "series": "fixed 4096-point gradients; actual training update"
+  },
+  {
+    "event": "learned_learned_loose_recovery",
+    "criterion": "original joint coefficient thresholds; sustained 100 steps",
+    "step": 8825,
+    "status": "sustained at least 100 steps",
+    "series": "fixed-grid unconstrained LS"
+  },
+  {
+    "event": "learned_learned_strong_recovery",
+    "criterion": "original joint coefficient thresholds; sustained 100 steps",
+    "step": 9975,
+    "status": "sustained at least 100 steps",
+    "series": "fixed-grid unconstrained LS"
+  },
+  {
+    "event": "learned_reference_loose_recovery",
+    "criterion": "original joint coefficient thresholds; sustained 100 steps",
+    "step": 7000,
+    "status": "left-censored at 7000",
+    "series": "fixed-grid unconstrained LS"
+  },
+  {
+    "event": "learned_reference_strong_recovery",
+    "criterion": "original joint coefficient thresholds; sustained 100 steps",
+    "step": 9000,
+    "status": "sustained at least 100 steps",
+    "series": "fixed-grid unconstrained LS"
+  },
+  {
+    "event": "reference_learned_loose_recovery",
+    "criterion": "original joint coefficient thresholds; sustained 100 steps",
+    "step": 8950,
+    "status": "sustained at least 100 steps",
+    "series": "fixed-grid unconstrained LS"
+  },
+  {
+    "event": "reference_learned_strong_recovery",
+    "criterion": "original joint coefficient thresholds; sustained 100 steps",
+    "step": null,
+    "status": "unresolved / not met",
+    "series": "fixed-grid unconstrained LS"
+  },
+  {
+    "event": "true_support_learned_loose_recovery",
+    "criterion": "original joint coefficient thresholds; sustained 100 steps",
+    "step": 8700,
+    "status": "sustained at least 100 steps",
+    "series": "fixed-grid unconstrained LS"
+  },
+  {
+    "event": "true_support_learned_strong_recovery",
+    "criterion": "original joint coefficient thresholds; sustained 100 steps",
+    "step": 9775,
+    "status": "sustained at least 100 steps",
+    "series": "fixed-grid unconstrained LS"
+  },
+  {
+    "event": "true_support_reference_loose_recovery",
+    "criterion": "original joint coefficient thresholds; sustained 100 steps",
+    "step": 7000,
+    "status": "left-censored at 7000",
+    "series": "fixed-grid unconstrained LS"
+  },
+  {
+    "event": "true_support_reference_strong_recovery",
+    "criterion": "original joint coefficient thresholds; sustained 100 steps",
+    "step": null,
+    "status": "unresolved / not met",
+    "series": "fixed-grid unconstrained LS"
+  },
+  {
+    "event": "SymNet_loose_recovery",
+    "criterion": "original coefficient thresholds; first exact dense crossing",
+    "step": 8853,
+    "status": "observed",
+    "series": "every-step replay"
+  },
+  {
+    "event": "SymNet_strong_recovery",
+    "criterion": "original coefficient thresholds; first exact dense crossing",
+    "step": 10013,
+    "status": "observed",
+    "series": "every-step replay"
+  },
+  {
+    "event": "rapid_transport",
+    "criterion": "forward 100-step mean transport movement >=0.0005/step, sustained 100 start steps",
+    "step": 8019,
+    "status": "sustained at least 100 steps",
+    "series": "every-step replay"
+  }
+]

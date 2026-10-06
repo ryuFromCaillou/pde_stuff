@@ -1,0 +1,62 @@
+event,criterion,step,status,series
+u_t_rel_l2,10% of net 7000-to-10500 change; sustained 100 steps,7900,sustained at least 100 steps,fixed evaluation
+u_t_rel_l2,25% of net 7000-to-10500 change; sustained 100 steps,8250,sustained at least 100 steps,fixed evaluation
+u_t_rel_l2,50% of net 7000-to-10500 change; sustained 100 steps,8525,sustained at least 100 steps,fixed evaluation
+u_t_rel_l2,75% of net 7000-to-10500 change; sustained 100 steps,8825,sustained at least 100 steps,fixed evaluation
+u_t_rel_l2,90% of net 7000-to-10500 change; sustained 100 steps,9275,sustained at least 100 steps,fixed evaluation
+u_t_cosine,10% of net 7000-to-10500 change; sustained 100 steps,7500,sustained at least 100 steps,fixed evaluation
+u_t_cosine,25% of net 7000-to-10500 change; sustained 100 steps,7850,sustained at least 100 steps,fixed evaluation
+u_t_cosine,50% of net 7000-to-10500 change; sustained 100 steps,8200,sustained at least 100 steps,fixed evaluation
+u_t_cosine,75% of net 7000-to-10500 change; sustained 100 steps,8500,sustained at least 100 steps,fixed evaluation
+u_t_cosine,90% of net 7000-to-10500 change; sustained 100 steps,8775,sustained at least 100 steps,fixed evaluation
+u_x_rel_l2,10% of net 7000-to-10500 change; sustained 100 steps,7750,sustained at least 100 steps,fixed evaluation
+u_x_rel_l2,25% of net 7000-to-10500 change; sustained 100 steps,8125,sustained at least 100 steps,fixed evaluation
+u_x_rel_l2,50% of net 7000-to-10500 change; sustained 100 steps,8400,sustained at least 100 steps,fixed evaluation
+u_x_rel_l2,75% of net 7000-to-10500 change; sustained 100 steps,8675,sustained at least 100 steps,fixed evaluation
+u_x_rel_l2,90% of net 7000-to-10500 change; sustained 100 steps,9075,sustained at least 100 steps,fixed evaluation
+u_xx_rel_l2,10% of net 7000-to-10500 change; sustained 100 steps,7675,sustained at least 100 steps,fixed evaluation
+u_xx_rel_l2,25% of net 7000-to-10500 change; sustained 100 steps,8050,sustained at least 100 steps,fixed evaluation
+u_xx_rel_l2,50% of net 7000-to-10500 change; sustained 100 steps,8350,sustained at least 100 steps,fixed evaluation
+u_xx_rel_l2,75% of net 7000-to-10500 change; sustained 100 steps,8675,sustained at least 100 steps,fixed evaluation
+u_xx_rel_l2,90% of net 7000-to-10500 change; sustained 100 steps,9400,sustained at least 100 steps,fixed evaluation
+transport_rel_l2,10% of net 7000-to-10500 change; sustained 100 steps,7850,sustained at least 100 steps,fixed evaluation
+transport_rel_l2,25% of net 7000-to-10500 change; sustained 100 steps,8225,sustained at least 100 steps,fixed evaluation
+transport_rel_l2,50% of net 7000-to-10500 change; sustained 100 steps,8475,sustained at least 100 steps,fixed evaluation
+transport_rel_l2,75% of net 7000-to-10500 change; sustained 100 steps,8775,sustained at least 100 steps,fixed evaluation
+transport_rel_l2,90% of net 7000-to-10500 change; sustained 100 steps,9225,sustained at least 100 steps,fixed evaluation
+rhs_rel_l2,10% of net 7000-to-10500 change; sustained 100 steps,7975,sustained at least 100 steps,fixed evaluation
+rhs_rel_l2,25% of net 7000-to-10500 change; sustained 100 steps,8325,sustained at least 100 steps,fixed evaluation
+rhs_rel_l2,50% of net 7000-to-10500 change; sustained 100 steps,8550,sustained at least 100 steps,fixed evaluation
+rhs_rel_l2,75% of net 7000-to-10500 change; sustained 100 steps,8850,sustained at least 100 steps,fixed evaluation
+rhs_rel_l2,90% of net 7000-to-10500 change; sustained 100 steps,9350,sustained at least 100 steps,fixed evaluation
+rhs_cancellation_ratio,10% of net 7000-to-10500 change; sustained 100 steps,8475,sustained at least 100 steps,fixed evaluation
+rhs_cancellation_ratio,25% of net 7000-to-10500 change; sustained 100 steps,8575,sustained at least 100 steps,fixed evaluation
+rhs_cancellation_ratio,50% of net 7000-to-10500 change; sustained 100 steps,8775,sustained at least 100 steps,fixed evaluation
+rhs_cancellation_ratio,75% of net 7000-to-10500 change; sustained 100 steps,9100,sustained at least 100 steps,fixed evaluation
+rhs_cancellation_ratio,90% of net 7000-to-10500 change; sustained 100 steps,9600,sustained at least 100 steps,fixed evaluation
+xi_u*u_x,10% of net 7000-to-10500 change; sustained 100 steps,7800,sustained at least 100 steps,fixed evaluation
+xi_u*u_x,25% of net 7000-to-10500 change; sustained 100 steps,8150,sustained at least 100 steps,fixed evaluation
+xi_u*u_x,50% of net 7000-to-10500 change; sustained 100 steps,8425,sustained at least 100 steps,fixed evaluation
+xi_u*u_x,75% of net 7000-to-10500 change; sustained 100 steps,8750,sustained at least 100 steps,fixed evaluation
+xi_u*u_x,90% of net 7000-to-10500 change; sustained 100 steps,9300,sustained at least 100 steps,fixed evaluation
+xi_u_xx,10% of net 7000-to-10500 change; sustained 100 steps,7775,sustained at least 100 steps,fixed evaluation
+xi_u_xx,25% of net 7000-to-10500 change; sustained 100 steps,8225,sustained at least 100 steps,fixed evaluation
+xi_u_xx,50% of net 7000-to-10500 change; sustained 100 steps,8675,sustained at least 100 steps,fixed evaluation
+xi_u_xx,75% of net 7000-to-10500 change; sustained 100 steps,9200,sustained at least 100 steps,fixed evaluation
+xi_u_xx,90% of net 7000-to-10500 change; sustained 100 steps,9800,sustained at least 100 steps,fixed evaluation
+gradient_alignment,first nonnegative data/PDE cosine sustained 100 steps; fixed sample primary,9625,sustained at least 100 steps,fixed 4096-point gradients; actual training update
+weighted_gradient_ratio,first weighted PDE/data norm ratio <=1 sustained 100 steps,,unresolved / not met,fixed 4096-point gradients; actual training update
+update_aligned_both_losses,first update cosine with -data and -PDE both nonnegative sustained 100 steps,7825,sustained at least 100 steps,fixed 4096-point gradients; actual training update
+learned_learned_loose_recovery,original joint coefficient thresholds; sustained 100 steps,8825,sustained at least 100 steps,fixed-grid unconstrained LS
+learned_learned_strong_recovery,original joint coefficient thresholds; sustained 100 steps,9975,sustained at least 100 steps,fixed-grid unconstrained LS
+learned_reference_loose_recovery,original joint coefficient thresholds; sustained 100 steps,7000,left-censored at 7000,fixed-grid unconstrained LS
+learned_reference_strong_recovery,original joint coefficient thresholds; sustained 100 steps,9000,sustained at least 100 steps,fixed-grid unconstrained LS
+reference_learned_loose_recovery,original joint coefficient thresholds; sustained 100 steps,8950,sustained at least 100 steps,fixed-grid unconstrained LS
+reference_learned_strong_recovery,original joint coefficient thresholds; sustained 100 steps,,unresolved / not met,fixed-grid unconstrained LS
+true_support_learned_loose_recovery,original joint coefficient thresholds; sustained 100 steps,8700,sustained at least 100 steps,fixed-grid unconstrained LS
+true_support_learned_strong_recovery,original joint coefficient thresholds; sustained 100 steps,9775,sustained at least 100 steps,fixed-grid unconstrained LS
+true_support_reference_loose_recovery,original joint coefficient thresholds; sustained 100 steps,7000,left-censored at 7000,fixed-grid unconstrained LS
+true_support_reference_strong_recovery,original joint coefficient thresholds; sustained 100 steps,,unresolved / not met,fixed-grid unconstrained LS
+SymNet_loose_recovery,original coefficient thresholds; first exact dense crossing,8853,observed,every-step replay
+SymNet_strong_recovery,original coefficient thresholds; first exact dense crossing,10013,observed,every-step replay
+rapid_transport,"forward 100-step mean transport movement >=0.0005/step, sustained 100 start steps",8019,sustained at least 100 steps,every-step replay

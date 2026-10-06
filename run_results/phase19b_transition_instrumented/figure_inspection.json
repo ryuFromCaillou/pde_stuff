@@ -1,0 +1,12 @@
+{
+  "inspected_pngs": [
+    "figure1_synchronized_transition.png",
+    "figure2_representation_evolution.png",
+    "figure3_ls_vs_symnet.png",
+    "figure4_adam_geometry.png",
+    "figure5_feature_geometry.png",
+    "figure6_spatial_fidelity.png"
+  ],
+  "manual_visual_inspection": true,
+  "notes": "All six figures inspected: legible titles/axes, shared comparison limits, distinct raw/normalized and actual/fixed quantities, no clipping or missing panels. PDF copies generated from the same figures."
+}

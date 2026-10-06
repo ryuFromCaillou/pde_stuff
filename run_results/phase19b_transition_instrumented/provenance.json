@@ -1,0 +1,62 @@
+{
+  "originals": {
+    "long_horizon": {
+      "checkpoint_000000.pt": "0ed7cfd99e77ed0f0c2ef71266cd34c1a1e8be921ffd0c993b6b121d30cba019",
+      "checkpoint_000050.pt": "cd015db799fca9618d55076b65f1d2eec52d063f3daace342c7924cb3e68172e",
+      "checkpoint_000200.pt": "4b817d1afa86f2c495464f069cfff3edb9b95671c4f00bbdf24f5fdeff2c1438",
+      "checkpoint_000500.pt": "f88ada16008a03982ebfce63b864f861558078210f23dcd325a008914f01e3a3",
+      "checkpoint_001000.pt": "6f495367a46fcaca0781f3118411f466023950a76bd81332b7b2d3864157c1a8",
+      "checkpoint_002000.pt": "02200ef057d12d231d04437f38a029145baddd18029f281587b4a4d9549f6891",
+      "checkpoint_005000.pt": "48bd0241fbe56383332fa5bab155f15d7ad1fb67ad06500637ffbe8207a4c69b",
+      "checkpoint_010000.pt": "68b140f2eeb7b60525b218b67470dbee79d96964b6b0e8c006b14016ea819078",
+      "checkpoint_020000.pt": "867128c80cee8f840a253a9d1b247da4d3ca242897da5c8d367ae4309706de16",
+      "checkpoint_050000.pt": "de99b3b2840f0da0f216cb1a15756b1bf1feaed6a0e30ff0aa3c592ac1148779",
+      "checkpoint_100000.pt": "71788600ffbbd20c7a0901566af19f9a5e5c019d8a52a4ead98595f5d2fb57e7",
+      "checkpoint_metrics.csv": "bda1ff24568e931fc5357ca96adbda172391c8aca8a6d501322399874cee0905",
+      "coefficient_trajectory.pdf": "f2dc1198fd327db3c2b3ea44f77fb4a061e24743ee1d7c905d08754524868cec",
+      "coefficient_trajectory.png": "110d11d85b61d0aac201f53de0201c22b858fc17283190e8901c2968f76717c3",
+      "config.json": "178eafc73e618d0b4090df3de712eb8988b9cb302b5c844a22ee805cf6ede004",
+      "initial_state.pt": "81f8d6097544f4919742c3740464ede843fd001e90d68a165a9d50dcb3ba4294",
+      "optimization_history.csv": "d81af809597e51d5f74c31ae9fc154431cb27e0ad25fc5cfed58f725323942b0",
+      "status.json": "c493f75b7d3af9eed364536d02651882b67e8f90755e0b0fb21482f2e78f7788"
+    },
+    "posthoc": {
+      "alignments.csv": "5dd7003a56a53e5e6d7d695ab457ecadab29357513e45e8a2f05147eff068520",
+      "config.json": "fb3c8d9942234a9c01a7fd596e7d73e6bff68ffca0801316944937adf950639d",
+      "email_summary.txt": "ce7e0d627a644e59c3f27e3e1cd84ccedf42f8132be4349bc22f06bc85e5f701",
+      "fidelity.csv": "1d6243764582d2faec8508d9564c69134f208c996126f4f561edd1d9b01c174d",
+      "fields.npz": "66fc135d272a717baa02160cd39a4def29cd214c4437f1051261eabc6f633bd8",
+      "figure1_error_maps.pdf": "d953470da40dec09bde18d53cc70a20e4802bdfa4865902a30898f3e4d80b92a",
+      "figure1_error_maps.png": "19e37c5cc56e664989d80e8d1f190ecdc45d3f0af1da2e292430940abc3ce6a6",
+      "figure2_normalized_gram.pdf": "c231adb5ff48e6da244b7053b9456678e570bb7d31f3e4700a79139de808a067",
+      "figure2_normalized_gram.png": "018c154d3fac48e5debe7d10185f378e3b7497669b8c533942cc2470cbb5786b",
+      "figure2_raw_gram.pdf": "704a72081144a72b8450ef118e257e8a1e247597e4d57ede51351a6060463ac5",
+      "figure2_raw_gram.png": "95c3e29524c98ed573fb5b169601bd2587d6f76073e7b796485b09e7e8d7a0f8",
+      "figure3_singular_values.pdf": "30055908852325faa67335cc8a4794058bbe25980371bc72393a6e5abd416893",
+      "figure3_singular_values.png": "7089d65bd5f9f9ac143f7e9714514bd88107e92d46ca7d8744c32dcc5b53d21f",
+      "figure4_true_spurious_alignment.pdf": "c17d367d800a028a898166f0835c99d48c43ea774657b0f8590178b7fdcdff2e",
+      "figure4_true_spurious_alignment.png": "2df6cb40573decb78ea98df624aeaf98d52018529960e9aa98219614a733e0f5",
+      "figure5_ls_coefficients.pdf": "5e0bc5b8847576ff19ee577e88798d4022c24d85e6eb97d967e83ca03a9b9ea3",
+      "figure5_ls_coefficients.png": "9233e964e389d5ca12451323f12fd416e010d10725c0e42f4afd7655882d517d",
+      "figure6_error_projections.pdf": "44946dc882c88ecd6451de052e8bd47ab13c318fe2c29c04f576727808e6efc3",
+      "figure6_error_projections.png": "d73df1a943915df555148c5b46759927f6ae718d76a774f41138055bc7887e4b",
+      "figure7_physical_snapshots.pdf": "c15e95e3518b5e2ab24de59999b13737ce48e5e64ba2454a6d62d6b4155d23d0",
+      "figure7_physical_snapshots.png": "4dac71f019bedb01ccad2f80bca249230da8891128a65bef4edf6a8436805714",
+      "metrics.json": "3ca2909f1248ae41d349307303ffbab3ba6e0c0201f4b64b6b4f7bd4dd1bf5e1",
+      "projections.csv": "e6d0af483198a8dcd9c0bf0e48ea250f70ab2e2819ad3bee4121bc0d413e0f9e",
+      "report.md": "47aa148b8489c95545e46021c17524feb7ed40b4e1badf03056c86775759ccd1",
+      "validation.json": "d006166b2c009b9da59964e9c7b0b16cb7063dc0e514286253b424c87ad07337"
+    }
+  },
+  "notebook_sha256": "bf094d48f1805a0f9cb9cc9cc5bb540a2c0f6ef1fe9b44926388cc9878a6d6ac",
+  "matched_inputs_sha256": "a8a1274d0730e66a102325841542888abd237c681bd16fe8e6764ac61e4166e4",
+  "git_head": "84a86b313a7b7d556cce583cbf915d395fefd6a6",
+  "python": "3.12.3",
+  "torch": "2.12.1+cu130",
+  "numpy": "2.4.6",
+  "source_hashes": {
+    "utils/phase19b_instrumented_replay.py": "1f24d17b42d5a36a1fd8ec80501844ba8546fdbf96fe389e25a510637be33ba6",
+    "utils/physics.py": "f04495241f1896b3e92f3b96678036eda41589bac33288b393e4dfc90406891f",
+    "utils/phase19b_long_horizon.py": "26899c860cfbad7d4daa6c5a5441f6109fafd581bda991b2573a66912696840b"
+  }
+}

@@ -1,0 +1,65 @@
+[
+  {
+    "from_step": 7000,
+    "to_step": 7500,
+    "relative_condition_change": 0.022863386095200555,
+    "angle_change_degrees": -0.71447517664609,
+    "screen_positive": false
+  },
+  {
+    "from_step": 7500,
+    "to_step": 8000,
+    "relative_condition_change": -0.04910008892907525,
+    "angle_change_degrees": -1.587859074241603,
+    "screen_positive": false
+  },
+  {
+    "from_step": 8000,
+    "to_step": 8250,
+    "relative_condition_change": 0.001473791419697168,
+    "angle_change_degrees": -0.6481427224506042,
+    "screen_positive": false
+  },
+  {
+    "from_step": 8250,
+    "to_step": 8500,
+    "relative_condition_change": 0.017765283045334757,
+    "angle_change_degrees": 0.6402062349561817,
+    "screen_positive": false
+  },
+  {
+    "from_step": 8500,
+    "to_step": 8750,
+    "relative_condition_change": -0.010503797071226395,
+    "angle_change_degrees": 0.5284827536971868,
+    "screen_positive": false
+  },
+  {
+    "from_step": 8750,
+    "to_step": 9000,
+    "relative_condition_change": 0.0006648337622732203,
+    "angle_change_degrees": -0.028643213573865012,
+    "screen_positive": false
+  },
+  {
+    "from_step": 9000,
+    "to_step": 9500,
+    "relative_condition_change": 0.012176723161952063,
+    "angle_change_degrees": -0.03574550266153054,
+    "screen_positive": false
+  },
+  {
+    "from_step": 9500,
+    "to_step": 10000,
+    "relative_condition_change": 0.01168426879866269,
+    "angle_change_degrees": -0.18407432289718884,
+    "screen_positive": false
+  },
+  {
+    "from_step": 10000,
+    "to_step": 10500,
+    "relative_condition_change": 0.0062137573607405905,
+    "angle_change_degrees": -0.08891450721919725,
+    "screen_positive": false
+  }
+]
