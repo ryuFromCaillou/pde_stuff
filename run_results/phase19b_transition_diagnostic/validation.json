@@ -1,0 +1,120 @@
+{
+  "source_inventory": {
+    "checkpoint_000000.pt": "0ed7cfd99e77ed0f0c2ef71266cd34c1a1e8be921ffd0c993b6b121d30cba019",
+    "checkpoint_000050.pt": "cd015db799fca9618d55076b65f1d2eec52d063f3daace342c7924cb3e68172e",
+    "checkpoint_000200.pt": "4b817d1afa86f2c495464f069cfff3edb9b95671c4f00bbdf24f5fdeff2c1438",
+    "checkpoint_000500.pt": "f88ada16008a03982ebfce63b864f861558078210f23dcd325a008914f01e3a3",
+    "checkpoint_001000.pt": "6f495367a46fcaca0781f3118411f466023950a76bd81332b7b2d3864157c1a8",
+    "checkpoint_002000.pt": "02200ef057d12d231d04437f38a029145baddd18029f281587b4a4d9549f6891",
+    "checkpoint_005000.pt": "48bd0241fbe56383332fa5bab155f15d7ad1fb67ad06500637ffbe8207a4c69b",
+    "checkpoint_010000.pt": "68b140f2eeb7b60525b218b67470dbee79d96964b6b0e8c006b14016ea819078",
+    "checkpoint_020000.pt": "867128c80cee8f840a253a9d1b247da4d3ca242897da5c8d367ae4309706de16",
+    "checkpoint_050000.pt": "de99b3b2840f0da0f216cb1a15756b1bf1feaed6a0e30ff0aa3c592ac1148779",
+    "checkpoint_100000.pt": "71788600ffbbd20c7a0901566af19f9a5e5c019d8a52a4ead98595f5d2fb57e7",
+    "checkpoint_metrics.csv": "bda1ff24568e931fc5357ca96adbda172391c8aca8a6d501322399874cee0905",
+    "coefficient_trajectory.pdf": "f2dc1198fd327db3c2b3ea44f77fb4a061e24743ee1d7c905d08754524868cec",
+    "coefficient_trajectory.png": "110d11d85b61d0aac201f53de0201c22b858fc17283190e8901c2968f76717c3",
+    "config.json": "178eafc73e618d0b4090df3de712eb8988b9cb302b5c844a22ee805cf6ede004",
+    "initial_state.pt": "81f8d6097544f4919742c3740464ede843fd001e90d68a165a9d50dcb3ba4294",
+    "optimization_history.csv": "d81af809597e51d5f74c31ae9fc154431cb27e0ad25fc5cfed58f725323942b0",
+    "status.json": "c493f75b7d3af9eed364536d02651882b67e8f90755e0b0fb21482f2e78f7788"
+  },
+  "source_unchanged": true,
+  "notebook_unchanged": true,
+  "checkpoint_mse_checks": [
+    {
+      "step": 5000,
+      "field": "u",
+      "actual": 0.026330909073936436,
+      "archived": 0.026330909073936436
+    },
+    {
+      "step": 5000,
+      "field": "u_x",
+      "actual": 1.9559432963992711,
+      "archived": 1.9559432963992711
+    },
+    {
+      "step": 5000,
+      "field": "u_xx",
+      "actual": 2054.398232326255,
+      "archived": 2054.398232326255
+    },
+    {
+      "step": 5000,
+      "field": "u_t",
+      "actual": 0.8027050568361213,
+      "archived": 0.8027050568361213
+    },
+    {
+      "step": 10000,
+      "field": "u",
+      "actual": 0.0007293575245447669,
+      "archived": 0.0007293575245447669
+    },
+    {
+      "step": 10000,
+      "field": "u_x",
+      "actual": 0.37511620172713545,
+      "archived": 0.37511620172713545
+    },
+    {
+      "step": 10000,
+      "field": "u_xx",
+      "actual": 1120.933774562446,
+      "archived": 1120.933774562446
+    },
+    {
+      "step": 10000,
+      "field": "u_t",
+      "actual": 0.04675386748633905,
+      "archived": 0.04675386748633905
+    },
+    {
+      "step": 20000,
+      "field": "u",
+      "actual": 0.0001808216686563661,
+      "archived": 0.0001808216686563661
+    },
+    {
+      "step": 20000,
+      "field": "u_x",
+      "actual": 0.09369195235521645,
+      "archived": 0.09369195235521645
+    },
+    {
+      "step": 20000,
+      "field": "u_xx",
+      "actual": 506.54100670560007,
+      "archived": 506.54100670560007
+    },
+    {
+      "step": 20000,
+      "field": "u_t",
+      "actual": 0.012643104762516495,
+      "archived": 0.012643104762516495
+    }
+  ],
+  "feature_order_verified": true,
+  "coefficient_bias_identity_verified": true,
+  "additional_checks": [
+    {
+      "state": "5000",
+      "raw_vs_normalized_coeff_max_abs_difference": 1.6167622796103842e-15,
+      "symbolic_expansion_max_abs_difference": 5.4626160927995215e-08,
+      "incremental_spurious_identity_verified": true
+    },
+    {
+      "state": "10000",
+      "raw_vs_normalized_coeff_max_abs_difference": 1.339206523454095e-14,
+      "symbolic_expansion_max_abs_difference": 9.737790085395659e-08,
+      "incremental_spurious_identity_verified": true
+    },
+    {
+      "state": "20000",
+      "raw_vs_normalized_coeff_max_abs_difference": 2.9672445056583285e-15,
+      "symbolic_expansion_max_abs_difference": 2.2988910899357506e-06,
+      "incremental_spurious_identity_verified": true
+    }
+  ]
+}

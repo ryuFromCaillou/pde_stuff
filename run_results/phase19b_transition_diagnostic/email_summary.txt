@@ -1,0 +1,41 @@
+Phase 19B 5k-to-10k identifiability diagnostic
+
+Completed post-hoc on branch sami, using saved 5k/10k states plus supplementary 20k and the same 252x256 reference grid. No retraining, new sweep, commit, or push. Original long-horizon artifacts were hash-verified unchanged; the main notebook was not modified. RESEARCH_STATE.md records the new interpretation.
+
+Main conclusion: mixed fidelity and spatial-error cancellation, with a strong target-fidelity contribution to transport recovery. The true directions become more relevant to the learned target; they do not become newly independent, and spurious alternatives do not disappear.
+
+Key results (5k -> 10k):
+- u_t relative L2 error: 0.9184 -> 0.2216; cosine: 0.4319 -> 0.9785; predicted RMS: 0.2524 -> 0.8757 (reference 0.9755).
+- Relative errors: u 0.1894 -> 0.03153; u_x 0.5981 -> 0.2619; u_xx 0.8931 -> 0.6597; u*u_x 0.8110 -> 0.3644. u_xx MSE remains 1120.93 at 10k.
+- Full nine-term LS on learned features/predicted u_t gives transport/diffusion (-0.129899, 0.002963) -> (-0.904109, 0.016658), coefficient error 0.8909 -> 0.1220, residual MSE 0.005694 -> 0.001510.
+- Two-true-term LS gives (-0.199742, 0.007607) -> (-0.910778, 0.027636), residual MSE 0.04514 -> 0.03025. Additional spurious directions explain 87.4% -> 95.0% of that residual. Ambiguity persists.
+- Substituting reference u_t into learned-feature LS gives transport -0.83142 -> -1.01145. Conversely, reference features with predicted u_t give -0.10610 -> -0.87295. The exact LS bias decomposition attributes +0.70152 -> +0.10734 transport bias to target error; net feature-induced bias changes +0.16858 -> -0.01145. These are algebraic comparisons, not causal interventions.
+- Unit-column condition number worsens 5.812 -> 6.502 (reference 7.953); raw condition worsens 2749 -> 8061. All libraries have numerical rank nine at relative tolerance 1e-12. Smallest true/spurious principal angle shrinks 31.58 -> 27.27 degrees. Broad improvement in conditioning/separation is contradicted.
+- Transport/diffusion error cosine rises 0.6481 -> 0.8174. Their combined RHS error energy relative to summed individual weighted energies falls 0.3703 -> 0.2086: spatial-term cancellation improves. RHS relative error nevertheless remains 0.3965 at 10k, and exact-Burgers closure MSE is 0.11474 versus fitted full-library MSE 0.001510. Target-to-RHS error cancellation does not improve by the analogous normalized ratio.
+- Error energy projected onto the learned spurious span increases: e_t 11.0% -> 35.2%, transport 2.8% -> 18.4%, diffusion 21.6% -> 58.6%. The smaller remaining closure error becomes 93.7% spurious-aligned. This is not a story in which spurious directions cease to fit errors.
+
+Hypotheses: derivative fidelity contributes but “all derivatives became accurate” is unsupported; general better-conditioning/disappearing-alternatives explanation is contradicted; spatial error cancellation is supported; target fidelity is strongly implicated algebraically, but causal dominance remains unresolved. Mixed explanation is best supported.
+
+Caveats: numerical centered-difference reference, not analytic truth; reference u_t is defined by Burgers RHS, so exact-reference LS is a consistency check. Raw geometry mixes physical units; normalized geometry is unit-L2 without centering. LS is an unconstrained coefficient-space relaxation of the one-product SymNet. Two saved endpoints cannot locate or causally explain the fastest 8131-8631 transition, nor resolve optimizer/gradient dynamics or seed reliability. Projection fractions onto overlapping spans are not additive.
+
+Artifact directory:
+/home/ghost/ghost/pde_stuff/run_results/phase19b_transition_diagnostic/
+
+Standalone report:
+/home/ghost/ghost/pde_stuff/run_results/phase19b_transition_diagnostic/report.md
+
+Figures (each has a matching vector .pdf copy):
+/home/ghost/ghost/pde_stuff/run_results/phase19b_transition_diagnostic/figure1_error_maps.png
+/home/ghost/ghost/pde_stuff/run_results/phase19b_transition_diagnostic/figure2_normalized_gram.png
+/home/ghost/ghost/pde_stuff/run_results/phase19b_transition_diagnostic/figure2_raw_gram.png
+/home/ghost/ghost/pde_stuff/run_results/phase19b_transition_diagnostic/figure3_singular_values.png
+/home/ghost/ghost/pde_stuff/run_results/phase19b_transition_diagnostic/figure4_true_spurious_alignment.png
+/home/ghost/ghost/pde_stuff/run_results/phase19b_transition_diagnostic/figure5_ls_coefficients.png
+/home/ghost/ghost/pde_stuff/run_results/phase19b_transition_diagnostic/figure6_error_projections.png
+/home/ghost/ghost/pde_stuff/run_results/phase19b_transition_diagnostic/figure7_physical_snapshots.png
+
+Numerical artifacts in the same directory: metrics.json (complete matrices, spectra, fits, coefficients, projections and error decomposition), fidelity.csv, alignments.csv, projections.csv, fields.npz, config.json, validation.json. All eight PNG figure panels were inspected; archived metrics, symbolic polynomial expansion, raw/normalized LS and projection identities passed validation.
+
+Reproduce without training, from /home/ghost/ghost/pde_stuff:
+OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=2 .venv/bin/python runs/run_phase19b_transition_diagnostic.py --out run_results/phase19b_transition_diagnostic_repeat
+The new output directory must not exist. Run documentation: runs/PHASE19B_TRANSITION.md.

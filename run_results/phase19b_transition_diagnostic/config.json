@@ -1,0 +1,19 @@
+{
+  "source": "/home/ghost/ghost/pde_stuff/run_results/phase19b_long_horizon_control",
+  "checkpoints": [
+    5000,
+    10000,
+    20000
+  ],
+  "grid_shape": [
+    252,
+    256
+  ],
+  "grid_points": 64512,
+  "reference": "archived observations; centered periodic generator differences; u_t is Burgers RHS",
+  "linear_algebra_dtype": "float64",
+  "svd_relative_cutoff": 1e-12,
+  "normalization": "unit column L2 norm, no centering",
+  "training_performed": false,
+  "matched_inputs_sha256": "a8a1274d0730e66a102325841542888abd237c681bd16fe8e6764ac61e4166e4"
+}
