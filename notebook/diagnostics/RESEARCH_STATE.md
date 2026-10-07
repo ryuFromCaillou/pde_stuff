@@ -34,7 +34,7 @@ Clean periodic Burgers rollout → SIREN field fit / matched joint SIREN–Minim
 - Match seeds, initialization, sampling, budgets, coefficient extraction and criteria across controls; ground truth is for evaluation. Preserve existing artifacts and distinguish single-trajectory evidence from multi-seed surrogate reliability.
 
 ### Current next experiment
-Do not start a Phase 25 intervention. The next unresolved question is why the original Phase 19B trajectory recovers after 10,000 steps while the later smooth-control trajectories did not recover within their tested horizons. A future comparison with modified training settings may be warranted, but no such comparison is part of this control.
+The authorized next experiment is the Paul-path **parameter L1 validation and seed-0 pilot**, specified in `runs/PAUL_PATH_L1.md`. First verify loss composition, SymNet gradient contributions, absent direct SIREN penalty gradients, and matched Adam updates; then compare lambda 0/1e-7/1e-6/1e-5/1e-4 for 100,000 steps. Preserve Paul's executable nu=.02, T=.1, 10×64 observations, fresh 3×64 SIREN with frequencies 1/1, fresh MinimalSymNet, raw features, weights 1/1, and Adam 5e-4. This differs from Phase 19B and is not a replay of its archived trajectory. No noise experiment, LS diagnostic, large multi-seed sweep, or edit to Paul's notebook is authorized in this scope. Parameter L1 on factorized internal weights must not be described as physical-coefficient L1. Earlier smooth-control and transition-mechanism questions remain unresolved.
 
 ### Important files and artifact locations
 - Scientific narrative and visible analysis: `notebook/diagnostics/burgers_minimal_discovery_story.ipynb` (latest completed phase: 24).
@@ -328,3 +328,33 @@ Cancellation C initially worsens slightly (0.3826 at 7000, 0.3866 at 8000, 0.391
 The first sustained actual-update alignment with both negative fixed-sample gradients starts at 7825, but data alignment turns negative again at 8125 (also for the recorded training batch). This is a modest transient association, not a permanent optimizer switch. Median Adam inverse denominator rises smoothly from 440.8 at 7000 to 520.4 at 8150, then falls during/after recovery. Actual surrogate update norm peaks at 8550. Sustained nonnegative fixed-sample data/PDE gradient cosine appears only at 9625; the weighted PDE/data gradient ratio never falls to 1 (minimum 1.613) and grows as the data gradient shrinks. The exact triggering role of optimizer dynamics is unresolved.
 
 At sampled transition states, normalized condition spans 6.291–6.616, rank remains 9, and minimum true/spurious angle spans 26.35–29.30 degrees. Maximum adjacent normalized-condition change is4.91% and angle change1.59 degrees; neither predeclared sharp-change screen fires. H1 is supported narrowly for directional target alignment but not uniformly for target fidelity; H2 has no clean RHS/cancellation-first order; H3 is best supported observationally; H4 remains unresolved despite measurable early associations; H5 is contradicted at sampled resolution. Temporal precedence, algebraic compatibility and optimizer association are not causal evidence. One trajectory, observation-window censoring, fixed-gradient subsampling, numerical-reference/operator error and coarse geometry sampling limit interpretation. No notebook narrative changes, new model-development phase, commit or push accompanied this run.
+
+
+### Paul-path parameter L1 implementation validation (October 7, 2026)
+
+The reusable runner `runs/run_paul_path_l1.py` adds the previously computed but
+omitted parameter L1 term to Paul's executable joint objective. The source
+notebook remains unchanged. The protocol is `runs/PAUL_PATH_L1.md`; final
+mechanical/smoke evidence is `run_results/paul_path_l1_mse_smoke/`.
+
+On a frozen seed-0 initial state and batch, zero lambda reproduces the original
+unregularized loss and gradients bitwise. Executing the original notebook loss
+body, then including its existing weighted L1 term, matches the runner's losses
+and all model gradients bitwise for all five pilot lambdas. At lambda 1e-4,
+float32 SymNet gradient difference norm is approximately 3.16225e-4 (the expected
+lambda*sqrt(10)); direct SIREN penalty gradients are absent. The first Adam
+parameter update rounds identically for small lambdas in float32 despite the
+nonzero gradient increment; float64 resolves the expected difference. A matched
+float32 step after ten common unregularized steps changes SymNet parameters by
+2.61264e-6 at lambda 1e-4, and matches the explicit Adam moment/bias-correction
+formula. These checks establish implementation behavior, not PDE recovery.
+Parameter sparsity of factorized MinimalSymNet is not physical-coefficient
+sparsity; L1 can change future SIREN trajectories indirectly through coupling.
+
+The five-condition, seed-0, 100k-step pilot has been launched at
+`run_results/paul_path_l1_pilot_validated/`, with three independent CPU workers.
+Scientific comparison remains pending until all trajectories finish and outputs
+are validated. An initial launch at `paul_path_l1_pilot/` was stopped before
+training to retain the notebook's exact MSELoss operator; it is not pilot
+evidence. Prior smoke folders are implementation artifacts only. No noise, LS,
+additional seeds, or notebook changes are included.
