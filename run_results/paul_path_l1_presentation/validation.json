@@ -1,0 +1,155 @@
+{
+  "passed": true,
+  "checks": [
+    {
+      "dtype": "torch.float32",
+      "lambda_l1": 0.0,
+      "loss_identity_error": 0.0,
+      "symnet_gradient_difference_norm": 0.0,
+      "expected_gradient_difference_norm": 0.0,
+      "gradient_difference_max_error": 0.0,
+      "direct_siren_gradient": "absent",
+      "matched_siren_gradient_difference_norm": 0.0,
+      "symnet_adam_step_difference_norm": 0.0,
+      "passed": true
+    },
+    {
+      "dtype": "torch.float32",
+      "lambda_l1": 1e-07,
+      "loss_identity_error": 0.0,
+      "symnet_gradient_difference_norm": 3.1401768296746013e-07,
+      "expected_gradient_difference_norm": 3.162277835144778e-07,
+      "gradient_difference_max_error": 1.0593034005523805e-08,
+      "direct_siren_gradient": "absent",
+      "matched_siren_gradient_difference_norm": 0.0,
+      "symnet_adam_step_difference_norm": 0.0,
+      "passed": true
+    },
+    {
+      "dtype": "torch.float32",
+      "lambda_l1": 1e-06,
+      "loss_identity_error": 0.0,
+      "symnet_gradient_difference_norm": 3.164686404488748e-06,
+      "expected_gradient_difference_norm": 3.1622778351447778e-06,
+      "gradient_difference_max_error": 1.3278963706397917e-08,
+      "direct_siren_gradient": "absent",
+      "matched_siren_gradient_difference_norm": 0.0,
+      "symnet_adam_step_difference_norm": 0.0,
+      "passed": true
+    },
+    {
+      "dtype": "torch.float32",
+      "lambda_l1": 1e-05,
+      "loss_identity_error": 0.0,
+      "symnet_gradient_difference_norm": 3.162552457069978e-05,
+      "expected_gradient_difference_norm": 3.162277789670043e-05,
+      "gradient_difference_max_error": 1.3580574886873364e-08,
+      "direct_siren_gradient": "absent",
+      "matched_siren_gradient_difference_norm": 0.0,
+      "symnet_adam_step_difference_norm": 0.0,
+      "passed": true
+    },
+    {
+      "dtype": "torch.float32",
+      "lambda_l1": 0.0001,
+      "loss_identity_error": 0.0,
+      "symnet_gradient_difference_norm": 0.00031622545793652534,
+      "expected_gradient_difference_norm": 0.0003162277571391314,
+      "gradient_difference_max_error": 1.3205863069742918e-08,
+      "direct_siren_gradient": "absent",
+      "matched_siren_gradient_difference_norm": 0.0,
+      "symnet_adam_step_difference_norm": 0.0,
+      "passed": true
+    },
+    {
+      "dtype": "torch.float32",
+      "lambda_l1": 0.1,
+      "loss_identity_error": 0.0,
+      "symnet_gradient_difference_norm": 0.3162277638912201,
+      "expected_gradient_difference_norm": 0.3162277638912201,
+      "gradient_difference_max_error": 7.450580596923828e-09,
+      "direct_siren_gradient": "absent",
+      "matched_siren_gradient_difference_norm": 0.0,
+      "symnet_adam_step_difference_norm": 4.656612873077393e-10,
+      "passed": true
+    },
+    {
+      "dtype": "torch.float64",
+      "lambda_l1": 0.0,
+      "loss_identity_error": 0.0,
+      "symnet_gradient_difference_norm": 0.0,
+      "expected_gradient_difference_norm": 0.0,
+      "gradient_difference_max_error": 0.0,
+      "direct_siren_gradient": "absent",
+      "matched_siren_gradient_difference_norm": 0.0,
+      "symnet_adam_step_difference_norm": 0.0,
+      "passed": true
+    },
+    {
+      "dtype": "torch.float64",
+      "lambda_l1": 1e-07,
+      "loss_identity_error": 0.0,
+      "symnet_gradient_difference_norm": 3.1622776602071987e-07,
+      "expected_gradient_difference_norm": 3.162277660168379e-07,
+      "gradient_difference_max_error": 2.875570976809943e-18,
+      "direct_siren_gradient": "absent",
+      "matched_siren_gradient_difference_norm": 0.0,
+      "symnet_adam_step_difference_norm": 2.1655354019268987e-14,
+      "passed": true
+    },
+    {
+      "dtype": "torch.float64",
+      "lambda_l1": 1e-06,
+      "loss_identity_error": 0.0,
+      "symnet_gradient_difference_norm": 3.1622776601613937e-06,
+      "expected_gradient_difference_norm": 3.162277660168379e-06,
+      "gradient_difference_max_error": 2.6755441463158398e-17,
+      "direct_siren_gradient": "absent",
+      "matched_siren_gradient_difference_norm": 0.0,
+      "symnet_adam_step_difference_norm": 2.1627705035400334e-13,
+      "passed": true
+    },
+    {
+      "dtype": "torch.float64",
+      "lambda_l1": 1e-05,
+      "loss_identity_error": 0.0,
+      "symnet_gradient_difference_norm": 3.1622776601690185e-05,
+      "expected_gradient_difference_norm": 3.1622776601683795e-05,
+      "gradient_difference_max_error": 1.000007097528427e-17,
+      "direct_siren_gradient": "absent",
+      "matched_siren_gradient_difference_norm": 0.0,
+      "symnet_adam_step_difference_norm": 2.1585696236745836e-12,
+      "passed": true
+    },
+    {
+      "dtype": "torch.float64",
+      "lambda_l1": 0.0001,
+      "loss_identity_error": 0.0,
+      "symnet_gradient_difference_norm": 0.000316227766016833,
+      "expected_gradient_difference_norm": 0.00031622776601683794,
+      "gradient_difference_max_error": 1.1018204577883939e-17,
+      "direct_siren_gradient": "absent",
+      "matched_siren_gradient_difference_norm": 0.0,
+      "symnet_adam_step_difference_norm": 2.1208693478933693e-11,
+      "passed": true
+    },
+    {
+      "dtype": "torch.float64",
+      "lambda_l1": 0.1,
+      "loss_identity_error": 0.0,
+      "symnet_gradient_difference_norm": 0.31622776601683794,
+      "expected_gradient_difference_norm": 0.316227766016838,
+      "gradient_difference_max_error": 2.7755575615628914e-17,
+      "direct_siren_gradient": "absent",
+      "matched_siren_gradient_difference_norm": 0.0,
+      "symnet_adam_step_difference_norm": 1.1471931715416474e-09,
+      "passed": true
+    }
+  ],
+  "matched_adam_after_10_common_steps": {
+    "lambda_l1": 0.0001,
+    "symnet_step_difference_norm": 2.6126419925276423e-06,
+    "explicit_adam_formula_passed": true
+  },
+  "interpretation": "Parameter L1 directly affects only SymNet. Coupled future SIREN trajectories can change. First Adam step can round identically in float32; float64 resolves the expected update difference."
+}
