@@ -1,341 +1,131 @@
-## Workspace Identity
+# Experiment execution contract
 
-This folder contains run experiments for assessing model weaknesses wrt hyperparameter sweeps (usually).Primary outputs are experiment artifacts under `run_results/` (plots, metrics, saved tensors/models) produced by scripts. 
+## Workspace identity and routing
 
-## Architectural Constraints (Strict)
+`runs/` is the repository's experiment-execution and diagnostic orchestration layer: exact reproductions, controlled experiments, long-horizon runs, diagnostic instrumentation, interventions, ablations, robustness/seed studies, parameter sweeps, artifact-backed post-hoc analyses, and validation/regression checks. `run_results/` contains the resulting scientific artifacts.
 
-To prevent code bloating and single-file monolithic anti-patterns, all submitted code must strictly adhere to the following modular layout:
+Read root `AGENTS.md`. Before diagnostic/research work, read `notebook/diagnostics/RESEARCH_STATE.md`, the latest relevant section of `notebook/diagnostics/burgers_minimal_discovery_story.ipynb`, and `notebook/diagnostics/AGENTS.md`. Reconcile the design with current research state before writing or running code. Inspect the relevant runner, reusable implementation, protocol, and archived config; do not assume a runner's defaults are safe reproduction destinations.
 
-1. **Separation of Concerns:** Run scripts (`run_*.py`) are *orchestrators only*. They may not contain localized deep learning training loops, numeric analytical math, data generation algorithms, or plot rendering code.
-2. **Module Delegation:**
-   - **Data Sourcing:** Must go through a dataset pipeline or a dynamic registry. Direct implementation of physical grid loops inside execution scripts is forbidden.
-   - **Core Math/Physics:** Finite difference calculations, autograd chunk loops, and error metric definitions must reside inside `utils/physics.py` or `utils/derivative_utils.py`.
-   - **Serialization/IO:** Log tracking, dict payload dumps, and CSV writers must reside in a stateless `utils/io.py` or separate logger module.
-   - **Visualization:** Matplotlib logic must be completely isolated from execution runs. Post-processing engines should ingest `.json` or `.npz` artifacts headlessly after execution to generate plots.
-3. **No Redundant Imports:** Entrypoint scripts should not import heavy visualization frameworks (`matplotlib`) directly if they are only responsible for executing model optimizations.
+## Sources of truth and historical evidence
 
-## Task Routing (Read First)
+For diagnostic/research work, use this hierarchy:
 
-|Task / Domain component | System Layer Reference | Permitted Agent Modification|
+1. `notebook/diagnostics/RESEARCH_STATE.md`: canonical current scientific interpretation.
+2. Existing run artifacts: immutable evidence from completed experiments.
+3. Run-specific reports/configs: detailed evidence and provenance for individual experiments.
+4. `burgers_minimal_discovery_story.ipynb`: curated scientific narrative, not the canonical experiment log.
+5. Historical notebook Markdown and old run documentation cannot override a newer validated statement in `RESEARCH_STATE.md`.
+
+After validating a result that materially changes interpretation, update `RESEARCH_STATE.md` in the same change: keep current state concise and append detailed findings to history. Mark earlier conclusions as superseded or horizon-limited in current interpretation; do not rewrite history to imply they were never held. A report of non-recovery by step 1000 remains valid evidence of non-recovery within the first 1000 optimization steps.
+
+## Artifact preservation
+
+Existing `run_results/` directories are scientific evidence. By default, never overwrite, silently regenerate in place, delete, or alter their configs, histories, checkpoints, or reports. A later interpretation does not authorize editing an old artifact.
+
+Write reproductions to new destinations such as `<experiment>_repeat/`, `<experiment>_reproduction/`, or `<experiment>_audit/`, unless the task explicitly specifies another destination. Check actual output/resume behavior before execution. Validate existing evidence by reading, checking, and hashing it; write new audit results separately. Regenerated figures/reports also belong in a new destination unless modification is explicitly requested.
+
+## Exact reproduction and passive diagnostics
+
+“Reproduce” means preserve all scientifically relevant configuration unless explicitly changed: dataset/PDE parameters, physical time horizon, sampling and batch sequence, coordinate representation, architecture, initialization, seeds, feature definitions/order, scaling/normalization, loss weights, optimizer, learning rate/schedule, batch size, regularization, training horizon, and checkpoint semantics (including pre/post-update timing). Record source checkpoints, runtime/device/dtype details, and every deviation.
+
+Never silently substitute a newer “better” pipeline. If historical Markdown disagrees with executable code, report the discrepancy and determine which definition the task requires before proceeding with dependent work. Refactoring permission does not authorize changing a historical trajectory.
+
+Instrumentation is observational unless explicitly designed as an intervention. Preserve RNG state, minibatch sequence, initialization, gradients, optimizer state/Adam moments, parameter updates, and learning-rate schedule. Isolate randomness used by diagnostics. Additional backward passes must not contaminate training gradients or optimizer state; prefer offline analysis of captured states for substantial diagnostics.
+
+When trajectory identity matters, validate overlapping scalar histories and/or checkpoint tensors against the archive before interpreting new diagnostics. Report reproduction as **exact**, **numerically equivalent within stated tolerance**, or **approximate**, with evidence and tolerances. Never label an approximate reconstruction exact.
+
+## Step semantics and evaluation data
+
+One iteration that samples one minibatch, computes one gradient, and calls `optimizer.step()` is an **optimizer step / optimization step**. Use **epoch** only for genuine traversal of a defined training dataset. Preserve historical field names when reading artifacts, but explain their actual semantics.
+
+Distinguish sampled minibatch loss, sampled training-grid metric, fixed evaluation-grid metric, and full-grid metric; they are not interchangeable. Use a fixed evaluation grid or fixed evaluation sample for trajectory comparisons. Training loss may remain minibatch-based; scientific transitions must not be diagnosed solely from changing random minibatches.
+
+Record evaluation grid/indices, sampling method, reference derivative construction, coordinate system, and normalization. Burgers derivatives computed numerically from a generated solution grid are **numerical** or **generator-consistent reference quantities**, not analytic truth. State explicitly when reference `u_t` is defined by the Burgers RHS.
+
+## Scientific layers and metric interpretation
+
+Keep the following layers separate; low error or success in one does not establish success in another:
+
+| Layer | Quantities or question |
 |---|---|
-|Data Generation & Solvers| Datasets/data/processed/ | Consume via registry interfaces only. Do not inline solver math in run files.|
-|Grid Processing & Norms|utils/data_prep_utils.py|Mandatory data baseline engine. Do not duplicate arrays/normalization loops.|
-|Loss & Regularization|utils/tv_utils.py|Functional registration interface for total variations.|
-|Math & Analytical Derivatives|utils/derivative_utils.py|"Add new finite difference operators here only never within the execution routine."|
-|Orchestration / Sweeps|runs/run_*.py|"High-level script that loops over configs, triggers imports and dumps variables."|
-
-## Expected Outputs
-For sweep-style experiments, match the concrete layout used by `run_results/siren_hparam_sweep`:
-
-`Experiment type/`
-    `dataset/`
-        `sweep_axis_1/`
-            `sweep_axis_2/` (if available)
-                `seed_###/`
-                    `config.json`
-                    `fit_heatmap.pdf`
-                    `fit_snapshots.pdf`
-                    `loss_history.csv`
-                    `summary.json`
-                    `feature_overlays/`
-                        `<feature_name>_overlay.pdf`
-                    `pde_outputs/`
-                        `least_squares/`
-                            `pde.json`
-                            `pde.txt`
-                            `coefficients.csv`
-                            `diagnostics.json`
-                        `eql/`
-                            `pde.json`
-                            `pde.txt`
-                            `coefficients.csv`
-                            `diagnostics.json`
-                            `effective_quadratic_matrix.csv`
-        `summary.csv`
-        `summary_agg.csv`
-        `heatmaps/`
-            `final_train_loss_heatmap.pdf`
-            `min_train_loss_heatmap.pdf`
-            `<feature_name>_rel_l2_heatmap.pdf`
-
-### Feature Metric Heatmaps
-
-For sweep-style experiments, produce aggregated visualizations of scalar outcomes across the active sweep axes. Whether to emit 2D heatmaps or 1D plots depends on the number of sweep coordinates:
-
-- Two sweep coordinates: emit 2D heatmaps indexed by the two sweep axes (recommended for grid-style parameter sweeps).
-- One sweep coordinate: emit 1D summaries (line plots with mean ± std across seeds) rather than a 2D heatmap so results remain interpretable.
-
-Always include these aggregated metrics when available:
-
-- `final_train_loss_mean`
-- `min_train_loss_mean`
-
-And aggregate every available feature-fidelity metric over seeds using the same mean/std naming pattern:
-
-- `<feature_key>_rel_l2_mean`
-
-Examples of primitive feature keys and their summary columns:
-
-- `u` -> `u_rel_l2`, `u_rmse`, `u_max_abs`
-- `u_x` -> `ux_rel_l2`, `ux_rmse`, `ux_max_abs`
-- `u_xx` -> `uxx_rel_l2`, `uxx_rmse`, `uxx_max_abs`
-
-Interpret these keys as difference norms between model-computed features (using the active primitive feature library) and reference features computed on the clean grid (finite differences or analytic operators as appropriate).
-
-File-naming and output conventions (to distinguish 1D vs 2D outputs):
-
-- Two-sweep coords (2D heatmap): `<sweep_x>_vs_<sweep_y>_<metric>_heatmap.pdf` (e.g. `hidden_layers_vs_hidden_omega_0_final_train_loss_heatmap.pdf`).
-- One-sweep coord (1D line plot): `<sweep_coord>_<metric>_lineplot.pdf` (e.g. `hidden_layers_final_train_loss_lineplot.pdf`). Optionally append `_1d` to the filename if your tooling requires an explicit suffix.
-
-Scripts should detect the number of active sweep coordinates (from the sweep configuration or from `summary_agg.csv` grouping keys) and choose heatmaps vs lineplots automatically.
-
-If a run also performs PDE extraction or regularized fitting, extend `summary.json` with experiment-specific keys such as:
+| Field fidelity | `u` |
+| Derivative/target fidelity | `u_t`, `u_x`, `u_xx`, composite physical terms such as `u*u_x` |
+| Feature-library geometry | Correlations, Gram matrices, singular values, rank, condition numbers, true/spurious subspace relationships |
+| Symbolic representational sufficiency | Equation supported by a frozen representation; LS as a coefficient-space diagnostic |
+| Symbolic optimization | Whether MinimalSymNet actually reaches the equation |
+| Joint optimization dynamics | Gradients, update directions, optimizer state, data/PDE loss interactions |
+| PDE recovery | Physical coefficient accuracy and spurious terms |
 
-- tv_type
-- tv_lambda
-- final_data_loss
-- final_tv_loss
-- coeff_error_l2
-- pde_method
-- feature_names
-- ls_method
-- ls_terms
-- ls_coeffs
-- pde_terms
-- pde_coeffs
-- true_pde_terms
-- true_pde_coeffs
-- ls_true_pde_terms
-- ls_true_pde_coeffs
-- eql_feature_names
-- eql_readout_terms
-- eql_readout_coeffs
-- eql_readout_dim
+Do not rank derivative quality or feature importance by raw MSE across different units/scales. Where appropriate report MSE, relative L2, cosine similarity, predicted RMS, and reference RMS. Distinguish raw library conditioning from normalized/unit-column conditioning.
 
-PDE extraction fields are optional and should only be present when the corresponding extraction method was executed.
+Least squares tests what equation a learned representation supports under more flexible coefficient-space optimization. It does not establish MinimalSymNet recovery or exact representability by its nonlinear parameterization. Report LS and SymNet results separately to distinguish representation from symbolic optimizer behavior.
 
-### Dataset-level summary.csv
-`summary.csv` should contain one row per attempted run under a dataset-level sweep folder.
-
-For the active sweep, expected baseline columns are:
+## Feature scaling and recovery criteria
 
-- identity: dataset, seed, model
-- sweep coordinates for the active experiment
-- train configuration
-- scalar outcomes
-- run state
+Always distinguish **frozen-head conditioning effects** from **joint surrogate-training effects**. Phase 18 scaling substantially improved frozen-surrogate symbolic conditioning/optimization in the tested setting. Scaling also changes the magnitude and geometry of PDE gradient pressure on a jointly trained surrogate. Frozen benefits therefore do not imply that the same scaling is optimal or necessary for joint training; avoid generic claims that “scaling helps PDE discovery.”
 
-For EQL-style training, the feature library recorded in `feature_names` should be the primitive input set used by the model, not the LS candidate library.
+Record primitive scales, estimation data/procedure, whether scales are fixed or changing/detached, feature ordering, and the exact conversion from scaled to physical coefficients (including product, target, and coordinate scales when applicable).
 
-If feature comparisons are computed for the sweep, include the corresponding feature-fidelity summary keys in `summary.csv` as flat columns.
+Predeclare and record recovery criteria, thresholds, coefficient ordering, physical targets, spurious terms, and timing (endpoint, first crossing, or sustained recovery). For the established Burgers nine-term physical library, reuse the current loose/strong criteria from `RESEARCH_STATE.md` where scientifically appropriate, copying their exact definitions into the experiment config. Never silently change thresholds. PDE residual alone is not recovery: evaluate physical coefficients and spurious terms, and report field/derivative fidelity separately.
 
-For each active feature reported by the primitive feature library, include:
+## Evidence and controlled interventions
 
-- `<feature_key>_rel_l2`
-- `<feature_key>_rmse`
-- `<feature_key>_max_abs`
+Label claims by their evidence type:
 
-Examples:
+1. Observation/correlation.
+2. Temporal ordering.
+3. Algebraic decomposition or substitution.
+4. Frozen recombination / controlled intervention.
+5. Replicated intervention across seeds or conditions.
 
-- `u` -> `u_rel_l2`, `u_rmse`, `u_max_abs`
-- `u_x` -> `ux_rel_l2`, `ux_rmse`, `ux_max_abs`
-- `u_xx` -> `uxx_rel_l2`, `uxx_rmse`, `uxx_max_abs`
+Observational timing alone does not establish causality or a unique trigger, even if one quantity changes first. Do not call a rapid continuous transition a bifurcation without specific mathematical evidence.
 
-This keeps `summary.csv` usable both for heatmaps built from loss values and for downstream analysis of primitive feature fidelity.
+For interventions, freeze exactly the claimed component, record checkpoint provenance, use paired seeds where possible, preserve identical head initialization when the paired design requires it, predefine recovery criteria, and include appropriate controls. Distinguish sufficiency from historical causation: POST targets with PRE spatial features recovering under a fresh frozen head establish sufficiency under that intervention, not that target improvement caused the original transition.
 
-If PDE extraction is computed, include method-specific diagnostic columns.
+## Phase 19B interpretation guardrail
 
-For least-squares extraction, recommended columns include:
+Original Phase 19B was not a terminal failure: it recovers Burgers at a sufficiently long optimization horizon. The canonical long-horizon trajectory first met loose recovery at step **8853** and strong recovery at **10013**. Conclusions from the original 1000-step observation are finite-horizon observations.
 
-- ls_method
-- ls_terms
-- ls_coeffs
-- ls_residual_rel_l2
-- ls_residual_rmse
-- ls_rank
-- ls_condition_number
-- ls_coeff_error_l2
-- ls_num_active_terms
-- ls_active_terms
+Dense instrumentation supports a coupled recovery transition. Target-direction alignment changes early, but no unique causal initiator is established. Library conditioning shows no favorable transition explaining recovery. Endpoint diagnostics support improved target fidelity and spatial-error cancellation while ambiguity remains. The causal mechanism is unresolved without controlled intervention. Consult `RESEARCH_STATE.md` for detailed evidence and subsequent updates.
 
-where `ls_terms` is the LS-specific candidate library and `ls_active_terms` is a compact string representation of the active LS terms.
+## Run-script architecture
 
-For EQL outputs, recommended columns include:
+`runs/run_*.py` should primarily orchestrate experiments. Substantial reusable derivative calculations, numerical physics, metric definitions, plotting, serialization, and training machinery belong in `utils/`, `prog/`, or another appropriate module. Small experiment-specific operations may remain near the runner when extraction would obscure the design. Scientific correctness, provenance, and inspectability take priority over artificial layering.
 
-- eql_method
-- eql_feature_names
-- eql_readout_terms
-- eql_readout_coeffs
-- eql_readout_dim
-- eql_effective_quadratic_matrix_available
-- eql_effective_quadratic_matrix_error
+Use active dataset config, feature library, extraction method, and declared axes rather than Burgers-specific assumptions in general machinery. Keep dataset-specific physics in a suitable config block such as `dataset_args`.
 
-Detailed PDE representations, coefficient vectors, and term lists should remain in:
+Follow the root canonical primitive evaluation path: `prog/featlib.py` defines names/order; `utils/derivative_utils.py` provides `evaluate_model_primitive_features`, `build_reference_primitive_features` (or documented dataset-specific reference operators), `evaluate_primitive_feature_metrics`, and `primitive_feature_name_to_key`. Do not derive primitive metrics from an LS candidate library or duplicate feature construction in entrypoints. Primitive overlays use `utils/feature_plotting.py:save_primitive_feature_overlays`.
 
-- `pde_outputs/least_squares/pde.json`
-- `pde_outputs/eql/pde.json`
+Current routing examples (inspect their protocols, not just defaults):
 
-rather than being expanded into CSV columns.
+- Long-horizon reproduction: `run_phase19b_long_horizon.py`, `PHASE19B_LONG_HORIZON.md`.
+- Artifact-backed analysis: `run_phase19b_transition_diagnostic.py`, `PHASE19B_TRANSITION.md`.
+- Passive replay and offline analysis: `run_phase19b_transition_instrumented.py`, `PHASE19B_TRANSITION_INSTRUMENTED.md`.
+- Smooth control and audits: `run_phase24_smooth_burgers_control.py`, `run_phase24_surrogate_fit_audit.py`, `run_phase24_scale_gradient_diagnostic.py`, and their `PHASE24*.md` protocols.
 
-### Configuration Standards
-- Do not add explicit scalar hyperparameter fields for every potential PDE to the core run class configuration.
-- Use a polymorphic approach or a generic dictionary block (`dataset_args`) to isolate dataset-specific physics constraints, preventing horizontal configuration explosion.
+## Artifact contract and figures
 
-### Dataset-level summary_agg.csv
+Substantial experiments should generally provide `config.json`, metrics/history in CSV/JSON/NPZ as appropriate, `validation.json`, `report.md`, figures, scientifically necessary checkpoints, and a reproduction command. Exact filenames may differ; document equivalents, validation gates, and output contracts in the runner/protocol. Update these when outputs or behavior change.
 
-`summary_agg.csv` should contain one row per sweep-coordinate group after aggregating over seeds.
+A reader must be able to determine what ran, from what initial state, with which configuration/data, for how long, what was measured, whether validation passed, and how to reproduce it. Save provenance/hashes, environment details, and initial/optimizer/RNG states as required by the reproduction claim. Historical layouts are evidence, not templates requiring retroactive repair.
 
-Grouping keys should be the active sweep coordinates for the experiment.
+Phase 19B instrumentation illustrates saved `states/`, `updates/`, histories, provenance, validation, and offline tables; Phase 24 illustrates checkpoint/probe tables, cached fields, and specialized audits. Do not force `summary.csv`, `summary_agg.csv`, heatmaps, overlays, or seed folders onto every experiment.
 
-For `siren_hparam_sweep`, expected grouping keys are:
+Figures are scientific artifacts. Require a descriptive main title (subplot titles are insufficient), labeled axes/quantities, relevant checkpoints/conditions, consistent scales where comparisons require them, and nonmisleading normalization. Save underlying numerical data where practical; important figures should have PNG and vector PDF versions where practical. Normally separate plotting from optimization so figures can be regenerated from saved data without retraining, while preserving existing artifacts.
 
-- `hidden_layers`
-- `hidden_omega_0`
+## Sweep-specific conventions
 
-Expected aggregate columns include:
+These conventions apply to genuine sweeps only; the historical `siren_hparam_sweep` layout is an example, not a universal contract.
 
-- `num_seeds`
-- `final_train_loss_mean`
-- `final_train_loss_std`
-- `min_train_loss_mean`
-- `min_train_loss_std`
+- Use dataset/active-axis/seed organization where useful. Per-run `config.json` and `summary.json`, dataset-level `summary.csv` (one row per attempted run, including run state), and `summary_agg.csv` (one row per active-coordinate group) support comparison. Record identity, seed/model, active coordinates, training config, and scalar outcomes.
+- Aggregate over seeds with `num_seeds` and meaningful `_mean`/`_std` metrics, including final/minimum training loss and available feature metrics. Derive groups from declared axes and metric columns dynamically; never hardcode a derivative list or aggregate list/string coefficients without a defined representation.
+- Use 2D heatmaps for two active axes and mean ± std line plots for one. Prefer `<x>_vs_<y>_<metric>_heatmap.pdf` and `<axis>_<metric>_lineplot.pdf`; choose from the active configuration.
+- Feature fidelity uses deterministic `<feature_key>_rel_l2`, `_rmse`, `_max_abs` keys across summaries, aggregates, and plots. For SIREN feature-comparison sweeps, produce active-primitive overlays at `feature_overlays/<feature_key>_overlay.pdf`, normally at five evenly spaced available times (fewer for smaller grids), with reference/model curves and actual times. Use the canonical helpers above.
+- Record TV type/weight and separate data/TV losses when used. Reuse `utils/tv_utils.py` and appropriate data-preparation helpers; do not impose normalized coordinates on a physical-coordinate reproduction.
+- Emit extraction fields only for methods actually run. Distinguish primitive `feature_names` from LS candidate terms. Keep detailed equations/vectors in `pde_outputs/<method>/pde.json` with readable equations and diagnostics; tabulate scalar LS residual/rank/condition/coefficient errors or EQL readout metadata where useful. Preserve useful existing sweep contracts without requiring their structure for diagnostics.
 
-If feature-fidelity metrics are present in `summary.csv`, aggregate them dynamically using the same mean/std pattern:
+## Validation and notebook promotion
 
-- `<feature_key>_rel_l2_mean`
-- `<feature_key>_rel_l2_std`
-- `<feature_key>_rmse_mean`
-- `<feature_key>_rmse_std`
-- `<feature_key>_max_abs_mean`
-- `<feature_key>_max_abs_std`
+Run appropriate experiment-specific validation before interpreting results; check configuration, data correspondence, reproduction overlap, metric definitions, and preservation of source artifacts as applicable. Verify that any referenced validation runner actually exists in this checkout before invoking it.
 
-Examples:
-
-- `ux_rel_l2_mean`
-- `ux_rel_l2_std`
-- `uxx_rmse_mean`
-- `uxx_rmse_std`
-- `uux_max_abs_mean`
-- `uux_max_abs_std`
-
-Aggregation should be generated from the feature-fidelity columns present in `summary.csv`, not from a hardcoded derivative list.
-
-If least-squares PDE extraction metrics are present in `summary.csv`, aggregate scalar LS diagnostics where mean/std are meaningful, for example:
-
-- `ls_residual_rel_l2_mean`
-- `ls_residual_rel_l2_std`
-- `ls_residual_rmse_mean`
-- `ls_residual_rmse_std`
-- `ls_condition_number_mean`
-- `ls_condition_number_std`
-- `ls_coeff_error_l2_mean`
-- `ls_coeff_error_l2_std`
-
-Do not aggregate list/string fields such as `ls_terms`, `ls_coeffs`, or `ls_active_terms` unless a script explicitly defines a stable representation.
-
-### Feature Overlays
-
-Feature overlay requirement:
-
-For each trained SIREN MLP run, generate feature comparison plots for every active feature returned by the primitive feature library.
-
-Compare:
-
-- reference feature values computed from the clean reference solution
-- model feature values computed from the trained SIREN prediction
-
-Reference feature values should be computed using the same feature definitions as the active feature library, applied to the clean reference solution. Use finite differences, analytic derivatives, or other documented reference operators as appropriate for the dataset.
-
-The active primitive feature library is the authoritative source of:
-
-- feature names
-- feature definitions
-- feature ordering
-
-The set of generated overlays should be determined from the active feature names returned by the feature library. Do not maintain a separate hardcoded list of overlay features.
-
-For each active feature:
-
-- use the feature name returned by the feature library as the source of truth
-- generate a deterministic feature key used consistently across:
-  - overlay filenames
-  - summary.json keys
-  - summary.csv columns
-  - summary_agg.csv columns
-  - heatmap filenames
-
-Examples:
-
-- `u` -> `u`
-- `u_x` -> `ux`
-- `u_xx` -> `uxx`
-
-When possible, reuse the repository''s feature-library implementation for feature naming and feature construction rather than reimplementing feature definitions in plotting code.
-
-Use five evenly spaced time slices over the available time domain, or fewer if the grid has fewer than five time indices.
-
-Each plot should show:
-
-- `x` on the horizontal axis
-- feature value on the vertical axis
-- clean-grid reference and model prediction overlaid at each selected time slice
-- the actual plotted time in each subplot title
-
-If a future run script also records feature error summaries, use the same learned-vs-reference naming convention as the summary tables:
-
-- `<feature_key>_rel_l2`
-- `<feature_key>_rmse`
-- `<feature_key>_max_abs`
-
-If per-slice metrics are written to a separate file in the future, name and document that file explicitly in the corresponding `run_*.py` entrypoint.
-
-## Common Workflows
-
-### Run TV sweep
-1. Generate dataset using helpers in `utils/data_prep_utils.py`
-2. Configure sweep values
-3. Execute run_tv_sweep.py
-4. Check run_results/
-5. Compare summary.json files
-
-### Sweep SIREN hyperparameters
-1. Set `hidden_layers_grid` and `hidden_omega_0s`
-2. Execute `run_siren_hparam_sweep.py`
-3. Inspect per-run `summary.json` files
-4. Compare `summary_agg.csv`
-5. Review `final_train_loss_heatmap.pdf`
-
-### Evaluate feature accuracy
-
-1. Open `summary.json`
-2. Inspect all available feature-fidelity metrics:
-   - `<feature_key>_rel_l2`
-   - `<feature_key>_rmse`
-   - `<feature_key>_max_abs`
-3. Inspect all available feature overlay plots:
-   - `<feature_key>_overlay.pdf`
-4. Compare dataset-level feature heatmaps when present:
-   - `<feature_key>_rel_l2_heatmap.pdf`
-   - `<feature_key>_rmse_heatmap.pdf`
-   - `<feature_key>_max_abs_heatmap.pdf`
-5. Prefer models with stable feature-fidelity metrics, not merely low train loss.
-
-The set of evaluated features is determined by the active primitive feature library used during the run. Do not assume a fixed derivative set beyond the primitives supported by the library. Examples of valid features include:
-
-- `u`
-- `u_x`
-- `u_xx`
-
-and any future primitive features added to the library. Composite terms such as `uu_x` and `u3` belong to LS-specific candidate libraries, not the primitive feature library.
-
-### Evaluate PDE extraction
-1. Open `least_squares_pde.txt`
-2. Check whether the recovered active terms match the known PDE
-3. Open `least_squares_pde.json`
-4. Inspect `residual_rel_l2`, `condition_number`, and `coeff_error_l2`
-5. Compare extraction quality against derivative heatmaps
-
-### Conventions
-
-- For sweep scripts, prefer using `utils/data_prep_utils.py` (`PDETrainDataset`, `AffineNormalizer`) for subsampling, noise injection, and coordinate normalization to (-1,1), instead of duplicating `_affine_to_minus1_1`, `_to_norm`, or custom train-sample builders inside new `runs/run_*.py` files.
-
+Promotion order: run experiment → validate artifacts → interpret evidence → update `RESEARCH_STATE.md` if warranted → decide whether the result materially advances the narrative. Do not automatically add every run to the story notebook. Follow `notebook/diagnostics/AGENTS.md` for code visibility, figure titles, and storytelling; detailed phase histories belong in `RESEARCH_STATE.md`.
