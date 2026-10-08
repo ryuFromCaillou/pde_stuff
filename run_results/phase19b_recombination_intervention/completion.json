@@ -1,0 +1,7 @@
+{
+  "status": "complete",
+  "heads": 100,
+  "optimization_repeated": false,
+  "postprocessing_note": "Independent audit initially read JSON scale values as float64; corrected audit to original float32 scale dtype. All checks then passed without changing or rerunning any head fits.",
+  "reproduction_command": "OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=2 .venv/bin/python -u runs/run_phase19b_recombination.py --out run_results/phase19b_recombination_intervention_repeat"
+}

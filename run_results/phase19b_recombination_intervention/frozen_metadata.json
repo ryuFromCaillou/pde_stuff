@@ -1,0 +1,102 @@
+{
+  "8000": {
+    "state_file": "/home/ghost/ghost/pde_stuff/run_results/phase19b_transition_instrumented/states/state_008000.pt",
+    "state_sha256": "9261e8422fd31106c081aeb53ab21e53b44b848584afa8594738235881debec6",
+    "surrogate_tensor_sha256": "da74e168f8025a5f841d438cba12d51c20df2a582747f8cf6f3e2ddfcce19213",
+    "shape": [
+      252,
+      256
+    ],
+    "Theta_shape": [
+      64512,
+      9
+    ],
+    "quantities": {
+      "u": {
+        "shape": [
+          252,
+          256
+        ],
+        "dtype": "float64",
+        "sha256": "0b3a5e91781b2b168fb41b580abfbf40035efa6bc2b38b0c33fe1e61133fb9e7"
+      },
+      "u_x": {
+        "shape": [
+          252,
+          256
+        ],
+        "dtype": "float64",
+        "sha256": "94a6416625caadae3e77b3d53aea6475326e116585aeded7a520c693e3adc432"
+      },
+      "u_xx": {
+        "shape": [
+          252,
+          256
+        ],
+        "dtype": "float64",
+        "sha256": "f8ae8aff587519083a24b58c69bd1eaebc3399162d76a3b2c1a686f4b92987db"
+      },
+      "u_t": {
+        "shape": [
+          252,
+          256
+        ],
+        "dtype": "float64",
+        "sha256": "e63765588ec88c840062be118d2472c1e9477d4cf23fc0b4f71f6a5ae4974db8"
+      }
+    },
+    "Theta_sha256": "2585207ae097d1272ac7dbc3944073d013248190fe7c9ba30f17e5dd05e60b64",
+    "cached_fields_available": true,
+    "verification": "PRE cached fields bitwise; both states archive-manifest hash verified and canonical full-grid metrics and LS compared"
+  },
+  "8750": {
+    "state_file": "/home/ghost/ghost/pde_stuff/run_results/phase19b_transition_instrumented/states/state_008750.pt",
+    "state_sha256": "83a3ec3e7326f58af34d0135ccc8871938fe37851d59757f7016a9eefaf1e2af",
+    "surrogate_tensor_sha256": "d9665ae7bd2eedd4b59ca54ab9e30b27bd971e93f9831919c8a638389cca6a9f",
+    "shape": [
+      252,
+      256
+    ],
+    "Theta_shape": [
+      64512,
+      9
+    ],
+    "quantities": {
+      "u": {
+        "shape": [
+          252,
+          256
+        ],
+        "dtype": "float64",
+        "sha256": "3533160d78e242152f1237981300f38a7a42864cd019e6be622b4efd5a3b0b81"
+      },
+      "u_x": {
+        "shape": [
+          252,
+          256
+        ],
+        "dtype": "float64",
+        "sha256": "c194cede965134456d6f846f0d17c8d066ad2b5df57d666dda3bfcf5be20bc21"
+      },
+      "u_xx": {
+        "shape": [
+          252,
+          256
+        ],
+        "dtype": "float64",
+        "sha256": "5798f5901423943739337fc055eae1ce8994c96bd4f95dfbfa9f9143549d9dbe"
+      },
+      "u_t": {
+        "shape": [
+          252,
+          256
+        ],
+        "dtype": "float64",
+        "sha256": "bee734213088a8a12360d3f1f82adef56455651cc68832b9a1c894786fd431de"
+      }
+    },
+    "Theta_sha256": "2ac55de48b819c4da8d8c5bf0f98c8b5b09df599fad312cea1fd8f2061157ccc",
+    "cached_fields_available": false,
+    "verification": "PRE cached fields bitwise; both states archive-manifest hash verified and canonical full-grid metrics and LS compared"
+  }
+}

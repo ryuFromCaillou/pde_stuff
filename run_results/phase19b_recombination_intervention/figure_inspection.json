@@ -1,0 +1,12 @@
+{
+  "inspected": [
+    "figure1_intervention_2x2.png",
+    "figure2_recovery_summary.png",
+    "figure3_ls_vs_symnet.png"
+  ],
+  "titles_labels_and_layout_readable": true,
+  "all_conditions_visible": true,
+  "consistent_comparison_axes": true,
+  "truth_and_LS_visible": true,
+  "no_clipped_data": true
+}

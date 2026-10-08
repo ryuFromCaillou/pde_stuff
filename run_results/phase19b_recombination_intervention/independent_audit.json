@@ -1,0 +1,14 @@
+{
+  "status": "passed",
+  "heads_checked": 100,
+  "trajectory_rows_checked": 100100,
+  "paired_initial_state_and_coefficients": true,
+  "physical_library_rebuilt_exactly": true,
+  "recovery_flags_and_first_crossings_recomputed": true,
+  "physical_terminal_residuals_recomputed": true,
+  "source_inventories_and_notebook_unchanged": true,
+  "postprocessing_implementation_sha256": {
+    "utils/phase19b_recombination_audit.py": "7b41cd1db4ace565e6ee1a37b6e356a7a972b0a7173d5cd7614606cea8e3e1de",
+    "utils/phase19b_recombination_report.py": "367438c3d39e435169193e8bec1123bbfd050bf481514510113fb6fe75935b32"
+  }
+}

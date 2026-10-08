@@ -1,0 +1,11 @@
+a,b,criterion,a_only,b_only,both,neither,mcnemar_exact_p_unadjusted
+A,B,loose,0,0,0,25,1.0
+A,B,strong,0,0,0,25,1.0
+A,C,loose,0,0,0,25,1.0
+A,C,strong,0,0,0,25,1.0
+B,C,loose,0,0,0,25,1.0
+B,C,strong,0,0,0,25,1.0
+B,D,loose,0,0,0,25,1.0
+B,D,strong,0,0,0,25,1.0
+C,D,loose,0,0,0,25,1.0
+C,D,strong,0,0,0,25,1.0
