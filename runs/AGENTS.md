@@ -58,7 +58,7 @@ Keep the following layers separate; low error or success in one does not establi
 
 Do not rank derivative quality or feature importance by raw MSE across different units/scales. Where appropriate report MSE, relative L2, cosine similarity, predicted RMS, and reference RMS. Distinguish raw library conditioning from normalized/unit-column conditioning.
 
-Least squares tests what equation a learned representation supports under more flexible coefficient-space optimization. It does not establish MinimalSymNet recovery or exact representability by its nonlinear parameterization. Report LS and SymNet results separately to distinguish representation from symbolic optimizer behavior.
+Least squares is optional, not a default or required diagnostic. Include it only when the explicitly scoped scientific question calls for it; omit it from L1-only validation and pilots. When used, least squares tests what equation a learned representation supports under more flexible coefficient-space optimization. It does not establish MinimalSymNet recovery or exact representability by its nonlinear parameterization. Report LS and SymNet results separately to distinguish representation from symbolic optimizer behavior.
 
 ## Feature scaling and recovery criteria
 
