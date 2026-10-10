@@ -54,8 +54,8 @@ Reconcile the planned experiment against the current research state before writi
 | Primitive feature fidelity / derivative accuracy metrics | `utils/derivative_utils.py` (`evaluate_primitive_feature_metrics`, `build_reference_primitive_features`) and `prog/featlib.py` |
 | Primitive feature overlay plotting | `utils/feature_plotting.py` (`save_primitive_feature_overlays`) with `utils/derivative_utils.py` for reference/model feature evaluation |
 | PDE coefficient extraction | `utils/extract_pde_ls.py` and `prog/mlps.py` use mlps.EQL for eql pde coeff extraction |
-| Fit tests / model fitting utilities | `runs/run_fit_tests.py` and `utils/fit_utils.py` |
-| TV regularization behavior | `utils/tv_utils.py` and `runs/run_tv_lambda_sweep.py` |
+| Model fitting / joint training | `utils/fit_utils.py` and `runs/run_eql_joint_training.py` |
+| TV regularization behavior | `utils/tv_utils.py` and `runs/run_eql_joint_training.py` (`--tv-lambda`) |
 | Understand outputs | `run_results/` (match folder names to `runs/` scripts) |
 | Set up dependencies | `setup/requirements.txt` |
 
@@ -87,13 +87,11 @@ For primitive feature overlays:
 - Treat `run_results/` as generated artifacts; don't overwrite or delete prior results unless explicitly requested.
 - When changing experiment behavior, update the corresponding `runs/run_*.py` entrypoint so results are reproducible.
 
-## Automated Output Checks
+## Diagnostic Validation
 
-If you want an automated "run -> validate outputs" loop (local or via a remote wrapper), use:
-
-- `runs/run_output_check.py` to validate a specific `run_results/...` folder against a JSON spec
-- `runs/run_test_loop.py` to repeatedly run a command and validate the latest output
-- Example spec: `runs/regression_specs/tv_sweep_smoke.json`
+- Run lightweight matched-control regression checks with `python -m unittest discover -s tests -v` (`tests/test_burgers_control.py`).
+- Run Paul-path mechanical validation with `python runs/run_paul_path_l1.py --validate-only --output <new-audit-directory>`; the destination must not exist. See `runs/PAUL_PATH_L1.md` for the validation and output contract.
+- Use each current experiment's protocol in `runs/` for artifact validation; mechanical checks alone do not establish scientific recovery.
 
 ## Optimization Policy
 

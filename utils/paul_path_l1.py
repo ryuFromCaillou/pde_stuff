@@ -249,7 +249,7 @@ def main():
     args.output.mkdir(parents=True, exist_ok=False)
     torch.set_num_threads(1)
     model,head,train,full,rng,ti,xi = prepare(0)
-    hashes = {p:hashlib.sha256((ROOT/p).read_bytes()).hexdigest() for p in ['pauls_tweaks_diag_notebook.ipynb','prog/mlps.py','prog/minimal_symnet.py','prog/featlib.py','utils/paul_path_l1.py','Datasets/data/processed/burg_gen/burg_gen.py']}
+    hashes = {p:hashlib.sha256((ROOT/p).read_bytes()).hexdigest() for p in ['notebook/diagnostics/pauls_tweaks_diag_notebook.ipynb','prog/mlps.py','prog/minimal_symnet.py','prog/featlib.py','utils/paul_path_l1.py','Datasets/data/processed/burg_gen/burg_gen.py']}
     config = dict(seed=0, dataset_args=dict(nu=.02,T=.1,N=256,dt=.002), time_indices=ti.tolist(), space_indices=xi.tolist(), architecture='SirenMLP 3x64 omega 1/1; fresh MinimalSymNet', features=FEATURES, normalize=False, lambda_data=1., lambda_pde=1., lambdas=LAMBDAS, lr=5e-4, optimizer='Adam default betas=(.9,.999), eps=1e-8, weight_decay=0', steps=args.steps, batch_size=640, sampling='with replacement; matched RNG per treatment', dtype='float32', device='cpu', threads_per_worker=1, workers=args.workers, torch=torch.__version__, python=platform.python_version(), source_hashes=hashes, recovery=dict(loose=[.25,.02,.25],strong=[.10,.01,.10],order=['transport absolute error','diffusion absolute error','spurious L2'],strict=True), smoke=args.steps!=100000)
     write_json(args.output/'config.json',config)
     torch.save(dict(surrogate=model.state_dict(),symnet=head.state_dict(),train=train,full=full,rng=rng),args.output/'matched_inputs.pt')
@@ -270,4 +270,4 @@ def main():
             for job in jobs:
                 summaries.append(job.result())
     report(args.output,summaries)
-    assert hashlib.sha256((ROOT/'pauls_tweaks_diag_notebook.ipynb').read_bytes()).hexdigest()==hashes['pauls_tweaks_diag_notebook.ipynb']
+    assert hashlib.sha256((ROOT/'notebook/diagnostics/pauls_tweaks_diag_notebook.ipynb').read_bytes()).hexdigest()==hashes['notebook/diagnostics/pauls_tweaks_diag_notebook.ipynb']
