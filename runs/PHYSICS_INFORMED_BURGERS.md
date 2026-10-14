@@ -128,3 +128,11 @@ not the optimizer trajectories. For a fresh reproduction, omit `--reuse-complete
 and use a new output path; `--workers 2` still waits for seed 0 before repeats.
 The consolidated scientific result is `clean_baseline_completed/`; audit that folder
 with a new audit destination after all six seed trajectories finish.
+
+### Token-limited follow-up policy
+
+The completed clean baseline retains six seeds for reliability. For the next
+exploratory noise and sampling studies, use only initialization seeds `0` and `1`
+with the same hyperparameters; do not retune either seed. Treat those results as
+two-seed exploratory evidence, not a replacement for the six-seed clean baseline.
+Use separate noise/sampling seeds and keep the clean evaluation grid fixed.

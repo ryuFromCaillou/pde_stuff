@@ -36,7 +36,7 @@ Clean periodic Burgers rollout → SIREN field fit / matched joint SIREN–Minim
 - Match seeds, initialization, sampling, budgets, coefficient extraction and criteria across controls; ground truth is for evaluation. Preserve existing artifacts and distinguish single-trajectory evidence from multi-seed surrogate reliability.
 
 ### Current next experiment
-The next decision is whether to adopt a staged 50k screening horizon followed by 100k extension for candidates that reach loose recovery; the clean evidence places median loose recovery near 45k and median strong recovery near 88k. Noise and sampling protocols remain documented only; neither sweep nor the combined study is authorized in this task. The preceding Paul-path L1 experiment remains historical evidence. The narrative notebooks remain unchanged.
+The next decision is whether to adopt a staged 50k screening horizon followed by 100k extension for candidates that reach loose recovery; the clean evidence places median loose recovery near 45k and median strong recovery near 88k. For token-limited exploratory noise and sampling studies, use initialization seeds 0 and 1 only, with separate condition seeds; label these as two-seed evidence and do not retune either seed. Noise and sampling protocols remain documented only; neither sweep nor the combined study is authorized in this task. The preceding Paul-path L1 experiment remains historical evidence. The narrative notebooks remain unchanged.
 
 ### Important files and artifact locations
 - Scientific narrative and visible analysis: `notebook/diagnostics/burgers_minimal_discovery_story.ipynb` (latest completed phase: 24).
