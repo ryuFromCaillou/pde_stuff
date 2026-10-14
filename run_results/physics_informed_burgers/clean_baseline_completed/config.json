@@ -1,0 +1,142 @@
+{
+  "dataset": {
+    "seed": 0,
+    "nu": 0.02,
+    "T": 0.1,
+    "N": 256,
+    "dt": 0.002,
+    "observations": 640,
+    "time_samples": 10,
+    "space_samples": 64
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "seed_0_gate": true,
+  "repeat_seeds": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "steps": 100000,
+  "architecture": {
+    "hidden_layers": 3,
+    "width": 64,
+    "first_omega": 1,
+    "hidden_omega": 1
+  },
+  "physical_head": "xi[0]*u*ux + xi[1]*uxx",
+  "initial_coefficients": [
+    0.0,
+    0.0
+  ],
+  "coefficient_initialization": "constant zeros independent of truth",
+  "surrogate_initialization": "fresh SirenMLP immediately after torch.manual_seed(seed)",
+  "batch_seed": "10000 + initialization_seed",
+  "features": [
+    "u",
+    "u_x",
+    "u_xx"
+  ],
+  "normalization": false,
+  "physical_coordinates": true,
+  "lr": 0.0005,
+  "optimizer": "Adam",
+  "adam": {
+    "betas": [
+      0.9,
+      0.999
+    ],
+    "eps": 1e-08,
+    "weight_decay": 0
+  },
+  "lambda_data": 1,
+  "lambda_pde": 1,
+  "l1": 0,
+  "batch_size": 640,
+  "batch_sampling": "with replacement",
+  "dtype": "float32",
+  "device": "cpu",
+  "threads": 1,
+  "recovery": {
+    "loose_abs": [
+      0.25,
+      0.02
+    ],
+    "strong_abs": [
+      0.1,
+      0.01
+    ],
+    "strict": true,
+    "targets": [
+      -1,
+      0.02
+    ],
+    "order": [
+      "transport",
+      "diffusion"
+    ]
+  },
+  "gate": "Mechanical/numerical checks pass; full 100k seed-0 endpoint strong, field relative L2 <0.05; finite metrics and independent residual agreement.",
+  "deviations": [
+    "Explicit two-coefficient head replaces SymNet as requested.",
+    "Fresh seed-controlled SIREN skips RNG consumption from discarded notebook models/pretraining; not an exact notebook trajectory replay.",
+    "Independent batch RNG; CPU used because CUDA unavailable.",
+    "Ground-truth dataset seed fixed at 0 for all optimization replicates."
+  ],
+  "noise_protocol": {
+    "levels": [
+      0,
+      0.01,
+      0.02,
+      0.05,
+      0.1,
+      0.2
+    ],
+    "executed": false,
+    "formula": "u_clean + sigma * std(original 640 clean observations, ddof=0) * epsilon",
+    "noise_seed_separate": true
+  },
+  "sampling_protocol": {
+    "ratios": [
+      1,
+      0.75,
+      0.5,
+      0.25,
+      0.1
+    ],
+    "counts": [
+      640,
+      480,
+      320,
+      160,
+      64
+    ],
+    "denominator": 640,
+    "executed": false,
+    "method": "nested uniform random subsets without replacement from a saved permutation; separate sampling seed"
+  },
+  "workers": 2,
+  "reuse_completed": "run_results/physics_informed_burgers/clean_baseline",
+  "python": "3.12.3",
+  "torch": "2.12.1+cu130",
+  "numpy": "2.4.6",
+  "source_hashes": {
+    "pauls_tweaks_diag_notebook.ipynb": "491dab2ed5c7f861329b069f0d661ffba2dda6a25448aeac950134ec44a315d3",
+    "notebook/diagnostics/burgers_minimal_discovery_story.ipynb": "bf094d48f1805a0f9cb9cc9cc5bb540a2c0f6ef1fe9b44926388cc9878a6d6ac",
+    "utils/physics_informed_burgers.py": "84f19279d635184e222a07a794dfb17a622d3ca3f9eeef5a10c13220829dc6f1",
+    "runs/run_physics_informed_burgers.py": "28caf4455026a0588e9f5284fe916158ae6092fcd160839766843351926979b9",
+    "prog/mlps.py": "2a3d9bb45bfbef001fef9552c2e4d3e9575b85f3024244b0b8218bcbbfdb8253",
+    "prog/featlib.py": "de95c650eb291d1e346b3b3e8d8b082ad08369f674491a0a9dcad59f854addd6",
+    "utils/derivative_utils.py": "6c77e1df263b3eec9329eb2c044f2d7c018ce7b3e10bf2f8e89b5fd0cadeb2cf",
+    "Datasets/data/processed/burg_gen/burg_gen.py": "c40505165e0dc1124ec5cf17b5124c21f933b3dd5376b41b5feda57178654164"
+  },
+  "smoke": false
+}

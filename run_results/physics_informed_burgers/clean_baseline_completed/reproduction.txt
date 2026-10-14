@@ -1,0 +1,2 @@
+/home/ghost/ghost/pde_stuff/.venv/bin/python runs/run_physics_informed_burgers.py --output run_results/physics_informed_burgers/clean_baseline_completed --steps 100000 --workers 2 --reuse-completed run_results/physics_informed_burgers/clean_baseline
+Use a new output directory; existing destinations are rejected.
