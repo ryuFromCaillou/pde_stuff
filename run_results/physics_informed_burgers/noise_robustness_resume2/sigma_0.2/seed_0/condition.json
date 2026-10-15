@@ -1,0 +1,10 @@
+{
+  "sigma": 0.2,
+  "init_seed": 0,
+  "noise_seed": 700000,
+  "noise_scale": 0.9142746917488257,
+  "noise_std": 0.17727748908770857,
+  "clean_target_mse": 0.03152071312069893,
+  "epsilon_sha256": "f8fdb5b11f4afa0eaa0a99d89f6b71ef97a3ffb7997bc74a05d9b02fb38c807f",
+  "initial_surrogate_sha256": "98a3ed04308bf632c98813761a83b312ea0f3d3ee751a983a5fe0658ab230da1"
+}

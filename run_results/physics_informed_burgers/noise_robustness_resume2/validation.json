@@ -5,5 +5,8 @@
   "paired_standardized_noise_across_sigma": true,
   "initialization_independent_of_noise": true,
   "pde_objective_finite_and_autodiff_based": true,
-  "notebooks_unchanged": true
+  "notebooks_unchanged": true,
+  "completed_conditions": 12,
+  "expected_conditions": 8,
+  "all_conditions_complete": false
 }
