@@ -1,0 +1,12 @@
+{
+  "ratio": 0.75,
+  "count": 480,
+  "init_seed": 1,
+  "sampling_seed": 910064,
+  "sampling_method": "nested prefix of one uniform random permutation without replacement",
+  "batch_size": 480,
+  "batch_sampling": "with replacement",
+  "permutation_sha256": "019386b4e1b4f1f777e6f66a0c27b430d2c9a92ab9df3311e33cab8956c96a96",
+  "selected_indices_sha256": "37dcce353021e5822360ddc5757a6c05b823f7e1fcda0ffa64b5bfa643282bf9",
+  "selected_indices_count": 480
+}

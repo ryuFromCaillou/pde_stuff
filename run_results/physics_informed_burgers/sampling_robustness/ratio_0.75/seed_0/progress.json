@@ -1,0 +1,20 @@
+{
+  "step": 100000,
+  "ratio": 0.75,
+  "count": 480,
+  "init_seed": 0,
+  "data_loss": 4.52987223980017e-05,
+  "pde_loss": 6.881078297737986e-05,
+  "total_loss": 0.00011410950537538156,
+  "transport": -0.8732691407203674,
+  "diffusion": 0.01685103215277195,
+  "transport_abs_error": 0.12673085927963257,
+  "diffusion_abs_error": 0.0031489678472280506,
+  "transport_relative_error": 0.12673085927963257,
+  "diffusion_relative_error": 0.15744839236140254,
+  "loose": true,
+  "strong": false,
+  "first_loose_step": 57169,
+  "first_strong_step": null,
+  "elapsed_seconds": 1660.6702493650373
+}

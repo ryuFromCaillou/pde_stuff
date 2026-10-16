@@ -1,0 +1,1 @@
+/home/ghost/ghost/pde_stuff/.venv/bin/python runs/run_physics_informed_burgers_sampling.py --output run_results/physics_informed_burgers/sampling_robustness --steps 100000 --workers 4
