@@ -1,0 +1,182 @@
+[
+  {
+    "sigma": 0.0,
+    "seed": 0,
+    "status": "complete"
+  },
+  {
+    "sigma": 0.0,
+    "seed": 1,
+    "status": "complete"
+  },
+  {
+    "sigma": 0.0,
+    "seed": 2,
+    "status": "complete"
+  },
+  {
+    "sigma": 0.0,
+    "seed": 3,
+    "status": "complete"
+  },
+  {
+    "sigma": 0.0,
+    "seed": 4,
+    "status": "complete"
+  },
+  {
+    "sigma": 0.0,
+    "seed": 5,
+    "status": "complete"
+  },
+  {
+    "sigma": 0.01,
+    "seed": 0,
+    "status": "complete"
+  },
+  {
+    "sigma": 0.01,
+    "seed": 1,
+    "status": "complete"
+  },
+  {
+    "sigma": 0.01,
+    "seed": 2,
+    "status": "complete"
+  },
+  {
+    "sigma": 0.01,
+    "seed": 3,
+    "status": "complete"
+  },
+  {
+    "sigma": 0.01,
+    "seed": 4,
+    "status": "complete"
+  },
+  {
+    "sigma": 0.01,
+    "seed": 5,
+    "status": "complete"
+  },
+  {
+    "sigma": 0.02,
+    "seed": 0,
+    "status": "complete"
+  },
+  {
+    "sigma": 0.02,
+    "seed": 1,
+    "status": "complete"
+  },
+  {
+    "sigma": 0.02,
+    "seed": 2,
+    "status": "complete"
+  },
+  {
+    "sigma": 0.02,
+    "seed": 3,
+    "status": "complete"
+  },
+  {
+    "sigma": 0.02,
+    "seed": 4,
+    "status": "complete"
+  },
+  {
+    "sigma": 0.02,
+    "seed": 5,
+    "status": "complete"
+  },
+  {
+    "sigma": 0.05,
+    "seed": 0,
+    "status": "complete"
+  },
+  {
+    "sigma": 0.05,
+    "seed": 1,
+    "status": "complete"
+  },
+  {
+    "sigma": 0.05,
+    "seed": 2,
+    "status": "complete"
+  },
+  {
+    "sigma": 0.05,
+    "seed": 3,
+    "status": "complete"
+  },
+  {
+    "sigma": 0.05,
+    "seed": 4,
+    "status": "complete"
+  },
+  {
+    "sigma": 0.05,
+    "seed": 5,
+    "status": "complete"
+  },
+  {
+    "sigma": 0.1,
+    "seed": 0,
+    "status": "complete"
+  },
+  {
+    "sigma": 0.1,
+    "seed": 1,
+    "status": "complete"
+  },
+  {
+    "sigma": 0.1,
+    "seed": 2,
+    "status": "complete"
+  },
+  {
+    "sigma": 0.1,
+    "seed": 3,
+    "status": "complete"
+  },
+  {
+    "sigma": 0.1,
+    "seed": 4,
+    "status": "complete"
+  },
+  {
+    "sigma": 0.1,
+    "seed": 5,
+    "status": "complete"
+  },
+  {
+    "sigma": 0.2,
+    "seed": 0,
+    "status": "complete"
+  },
+  {
+    "sigma": 0.2,
+    "seed": 1,
+    "status": "complete"
+  },
+  {
+    "sigma": 0.2,
+    "seed": 2,
+    "status": "complete"
+  },
+  {
+    "sigma": 0.2,
+    "seed": 3,
+    "status": "complete"
+  },
+  {
+    "sigma": 0.2,
+    "seed": 4,
+    "status": "complete"
+  },
+  {
+    "sigma": 0.2,
+    "seed": 5,
+    "status": "complete"
+  }
+]

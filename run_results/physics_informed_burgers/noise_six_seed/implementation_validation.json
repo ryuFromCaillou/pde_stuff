@@ -1,0 +1,11 @@
+{
+  "aggregation_unit_tests": {
+    "passed": true,
+    "count": 6
+  },
+  "plotting_integration_test": {
+    "passed": true,
+    "scope": "Temporary synthetic data only; full per-level/overview plots, tables and incomplete-study rejection. No synthetic data copied into research outputs."
+  },
+  "visual_inspection": "Training-loss PNG has readable axes, three loss components, logarithmic scales and unobscured means."
+}

@@ -1,0 +1,17 @@
+{
+  "pauls_tweaks_diag_notebook.ipynb": "491dab2ed5c7f861329b069f0d661ffba2dda6a25448aeac950134ec44a315d3",
+  "utils/physics_informed_burgers.py": "84f19279d635184e222a07a794dfb17a622d3ca3f9eeef5a10c13220829dc6f1",
+  "utils/physics_informed_burgers_noise.py": "58e4f2702452c77692376977f2c366ee33881dd36511a65ae100112425559825",
+  "utils/derivative_utils.py": "6c77e1df263b3eec9329eb2c044f2d7c018ce7b3e10bf2f8e89b5fd0cadeb2cf",
+  "utils/burgers_six_seed.py": "7bf6259f8fe67b6dd37628bf91d77faa946aa2000e92b33dc04d3509f6c6e9b4",
+  "prog/featlib.py": "de95c650eb291d1e346b3b3e8d8b082ad08369f674491a0a9dcad59f854addd6",
+  "prog/mlps.py": "2a3d9bb45bfbef001fef9552c2e4d3e9575b85f3024244b0b8218bcbbfdb8253",
+  "runs/audit_burgers_six_seed.py": "ff492293f35316615745c3b22c63d8b8447cd60c77766ba8fe084b01ee7d4b10",
+  "runs/BURGERS_SIX_SEED.md": "315a2ec9ecd7096b6373126c3829941b66704a5805a099991318b5a75dc6f7ae",
+  "runs/run_physics_informed_burgers_noise.py": "db2231953ae7138b0b646e5ff8c1422b0c65a38e1269f5a8cd1a227533b05d23",
+  "runs/run_burgers_six_seed.py": "a08c57f8600a4ab0f0299ec15234a1392da5bcb353fee25bf938bd03d46f4c7f",
+  "runs/run_physics_informed_burgers.py": "28caf4455026a0588e9f5284fe916158ae6092fcd160839766843351926979b9",
+  "tests/test_burgers_six_seed.py": "17524d7b884282fadf19fc29df57617588ca9c930096064defeee753ff3b4d0f",
+  "Datasets/data/processed/burg_gen/burg_gen.py": "c40505165e0dc1124ec5cf17b5124c21f933b3dd5376b41b5feda57178654164",
+  "notebook/diagnostics/burgers_minimal_discovery_story.ipynb": "bf094d48f1805a0f9cb9cc9cc5bb540a2c0f6ef1fe9b44926388cc9878a6d6ac"
+}
