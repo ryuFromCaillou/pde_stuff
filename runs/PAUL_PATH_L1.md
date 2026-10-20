@@ -56,3 +56,7 @@ float32 gradient increment / first-step formula use atol=rtol=2e-6, float64
 uses 1e-12. Actual gradient errors are saved, so tiny increments are not inferred
 from tolerance alone. The populated-moment float32 formula uses atol=1e-7,
 rtol=1e-6 and requires a strictly nonzero matched SymNet update difference.
+
+Source notebook location after repository cleanup: `notebook/diagnostics/pauls_tweaks_diag_notebook.ipynb`.
+Its bytes, outputs, and metadata are unchanged. New source-hash manifests use
+this repository-relative path; archived manifests retain the historical root path.
