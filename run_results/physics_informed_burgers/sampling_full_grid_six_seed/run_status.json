@@ -87,66 +87,66 @@
   {
     "ratio": 0.5,
     "seed": 5,
-    "status": "pending"
+    "status": "validated"
   },
   {
     "ratio": 0.25,
     "seed": 0,
-    "status": "pending"
+    "status": "validated"
   },
   {
     "ratio": 0.25,
     "seed": 1,
-    "status": "pending"
+    "status": "validated"
   },
   {
     "ratio": 0.25,
     "seed": 2,
-    "status": "pending"
+    "status": "validated"
   },
   {
     "ratio": 0.25,
     "seed": 3,
-    "status": "pending"
+    "status": "validated"
   },
   {
     "ratio": 0.25,
     "seed": 4,
-    "status": "pending"
+    "status": "validated"
   },
   {
     "ratio": 0.25,
     "seed": 5,
-    "status": "pending"
+    "status": "validated"
   },
   {
     "ratio": 0.1,
     "seed": 0,
-    "status": "pending"
+    "status": "validated"
   },
   {
     "ratio": 0.1,
     "seed": 1,
-    "status": "pending"
+    "status": "validated"
   },
   {
     "ratio": 0.1,
     "seed": 2,
-    "status": "pending"
+    "status": "validated"
   },
   {
     "ratio": 0.1,
     "seed": 3,
-    "status": "pending"
+    "status": "validated"
   },
   {
     "ratio": 0.1,
     "seed": 4,
-    "status": "pending"
+    "status": "validated"
   },
   {
     "ratio": 0.1,
     "seed": 5,
-    "status": "pending"
+    "status": "validated"
   }
 ]

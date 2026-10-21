@@ -1,0 +1,225 @@
+{
+  "passed": true,
+  "conditions": [
+    {
+      "ratio": 1.0,
+      "seed": 0,
+      "passed": true,
+      "history_rows": 100001,
+      "checkpoint_rows": 20
+    },
+    {
+      "ratio": 1.0,
+      "seed": 1,
+      "passed": true,
+      "history_rows": 100001,
+      "checkpoint_rows": 20
+    },
+    {
+      "ratio": 1.0,
+      "seed": 2,
+      "passed": true,
+      "history_rows": 100001,
+      "checkpoint_rows": 20
+    },
+    {
+      "ratio": 1.0,
+      "seed": 3,
+      "passed": true,
+      "history_rows": 100001,
+      "checkpoint_rows": 20
+    },
+    {
+      "ratio": 1.0,
+      "seed": 4,
+      "passed": true,
+      "history_rows": 100001,
+      "checkpoint_rows": 20
+    },
+    {
+      "ratio": 1.0,
+      "seed": 5,
+      "passed": true,
+      "history_rows": 100001,
+      "checkpoint_rows": 20
+    },
+    {
+      "ratio": 0.75,
+      "seed": 0,
+      "passed": true,
+      "history_rows": 100001,
+      "checkpoint_rows": 20
+    },
+    {
+      "ratio": 0.75,
+      "seed": 1,
+      "passed": true,
+      "history_rows": 100001,
+      "checkpoint_rows": 20
+    },
+    {
+      "ratio": 0.75,
+      "seed": 2,
+      "passed": true,
+      "history_rows": 100001,
+      "checkpoint_rows": 20
+    },
+    {
+      "ratio": 0.75,
+      "seed": 3,
+      "passed": true,
+      "history_rows": 100001,
+      "checkpoint_rows": 20
+    },
+    {
+      "ratio": 0.75,
+      "seed": 4,
+      "passed": true,
+      "history_rows": 100001,
+      "checkpoint_rows": 20
+    },
+    {
+      "ratio": 0.75,
+      "seed": 5,
+      "passed": true,
+      "history_rows": 100001,
+      "checkpoint_rows": 20
+    },
+    {
+      "ratio": 0.5,
+      "seed": 0,
+      "passed": true,
+      "history_rows": 100001,
+      "checkpoint_rows": 20
+    },
+    {
+      "ratio": 0.5,
+      "seed": 1,
+      "passed": true,
+      "history_rows": 100001,
+      "checkpoint_rows": 20
+    },
+    {
+      "ratio": 0.5,
+      "seed": 2,
+      "passed": true,
+      "history_rows": 100001,
+      "checkpoint_rows": 20
+    },
+    {
+      "ratio": 0.5,
+      "seed": 3,
+      "passed": true,
+      "history_rows": 100001,
+      "checkpoint_rows": 20
+    },
+    {
+      "ratio": 0.5,
+      "seed": 4,
+      "passed": true,
+      "history_rows": 100001,
+      "checkpoint_rows": 20
+    },
+    {
+      "ratio": 0.5,
+      "seed": 5,
+      "passed": true,
+      "history_rows": 100001,
+      "checkpoint_rows": 20
+    },
+    {
+      "ratio": 0.25,
+      "seed": 0,
+      "passed": true,
+      "history_rows": 100001,
+      "checkpoint_rows": 20
+    },
+    {
+      "ratio": 0.25,
+      "seed": 1,
+      "passed": true,
+      "history_rows": 100001,
+      "checkpoint_rows": 20
+    },
+    {
+      "ratio": 0.25,
+      "seed": 2,
+      "passed": true,
+      "history_rows": 100001,
+      "checkpoint_rows": 20
+    },
+    {
+      "ratio": 0.25,
+      "seed": 3,
+      "passed": true,
+      "history_rows": 100001,
+      "checkpoint_rows": 20
+    },
+    {
+      "ratio": 0.25,
+      "seed": 4,
+      "passed": true,
+      "history_rows": 100001,
+      "checkpoint_rows": 20
+    },
+    {
+      "ratio": 0.25,
+      "seed": 5,
+      "passed": true,
+      "history_rows": 100001,
+      "checkpoint_rows": 20
+    },
+    {
+      "ratio": 0.1,
+      "seed": 0,
+      "passed": true,
+      "history_rows": 100001,
+      "checkpoint_rows": 20
+    },
+    {
+      "ratio": 0.1,
+      "seed": 1,
+      "passed": true,
+      "history_rows": 100001,
+      "checkpoint_rows": 20
+    },
+    {
+      "ratio": 0.1,
+      "seed": 2,
+      "passed": true,
+      "history_rows": 100001,
+      "checkpoint_rows": 20
+    },
+    {
+      "ratio": 0.1,
+      "seed": 3,
+      "passed": true,
+      "history_rows": 100001,
+      "checkpoint_rows": 20
+    },
+    {
+      "ratio": 0.1,
+      "seed": 4,
+      "passed": true,
+      "history_rows": 100001,
+      "checkpoint_rows": 20
+    },
+    {
+      "ratio": 0.1,
+      "seed": 5,
+      "passed": true,
+      "history_rows": 100001,
+      "checkpoint_rows": 20
+    }
+  ],
+  "validated_conditions": 30,
+  "protected_artifacts": 3000,
+  "original_artifacts_unchanged": true,
+  "source_hashes_verified": true,
+  "independent_saved_means_and_population_sd": true,
+  "all_saved_checkpoint_losses_recomputed": true,
+  "initial_and_final_full_grid_diagnostics_recomputed": true,
+  "all_saved_fields_reference_errors_and_residuals_verified": true,
+  "batch_sequences_verified": true,
+  "interpolation": false
+}
