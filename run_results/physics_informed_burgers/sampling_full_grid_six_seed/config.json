@@ -1,0 +1,122 @@
+{
+  "experiment": "Full-grid six-seed sampling convergence",
+  "ratios": [
+    1.0,
+    0.75,
+    0.5,
+    0.25,
+    0.1
+  ],
+  "counts": [
+    13056,
+    9792,
+    6528,
+    3264,
+    1306
+  ],
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "steps": 100000,
+  "sampling_seed": 910064,
+  "population": 13056,
+  "sampling": "one shared nested permutation of time-major full grid",
+  "dataset": {
+    "seed": 0,
+    "nu": 0.02,
+    "T": 0.1,
+    "dt": 0.002,
+    "N": 256,
+    "shape": [
+      51,
+      256
+    ]
+  },
+  "training": {
+    "optimizer": "Adam",
+    "lr": 0.0005,
+    "data_weight": 1,
+    "pde_weight": 1,
+    "noise": 0,
+    "batch_size": 640,
+    "with_replacement": true,
+    "batch_seed": "10000+initialization seed",
+    "architecture": "SirenMLP hidden_size=64 hidden_layers=3 omega=1/1",
+    "physical_head": "zero initialized unconstrained two coefficients",
+    "l1": 0,
+    "symnet": false,
+    "least_squares": false
+  },
+  "recovery": {
+    "targets": [
+      -1,
+      0.02
+    ],
+    "loose_abs": [
+      0.25,
+      0.02
+    ],
+    "strong_abs": [
+      0.1,
+      0.01
+    ],
+    "strict": true,
+    "first_crossing_not_sustained": true
+  },
+  "checkpoints": [
+    0,
+    1,
+    10,
+    50,
+    100,
+    200,
+    500,
+    1000,
+    2000,
+    5000,
+    10000,
+    20000,
+    30000,
+    40000,
+    50000,
+    60000,
+    70000,
+    80000,
+    90000,
+    100000
+  ],
+  "source_hashes": {
+    "notebook/diagnostics/pauls_tweaks_diag_notebook.ipynb": "491dab2ed5c7f861329b069f0d661ffba2dda6a25448aeac950134ec44a315d3",
+    "notebook/diagnostics/burgers_minimal_discovery_story.ipynb": "d7cc681ca21c8d9fbb21062541d5c6e81dace1b54ec8241435650ad489761c46",
+    "utils/physics_informed_burgers.py": "84f19279d635184e222a07a794dfb17a622d3ca3f9eeef5a10c13220829dc6f1",
+    "utils/physics_informed_burgers_sampling.py": "84de3481f4fb113d7ae40220dc9c3d59c4d36fbbc4a1f4e4d6b2c5ff75d2c904",
+    "utils/physics_informed_burgers_noise.py": "58e4f2702452c77692376977f2c366ee33881dd36511a65ae100112425559825",
+    "utils/burgers_six_seed.py": "7bf6259f8fe67b6dd37628bf91d77faa946aa2000e92b33dc04d3509f6c6e9b4",
+    "utils/burgers_full_grid.py": "6b679cdbf1cfbd2f0b01ff23068a42c2d8bd756eebac644600804ed9e020c7cd",
+    "utils/burgers_full_grid_reporting.py": "e5648d1a5098eef6ed3ae304a9e846549390227680d29273bbe7867d74af659a",
+    "runs/run_burgers_full_grid.py": "1f7f58e9bc95688fc82d7169635ec614f847e155c90da02d33e7d37055a02ee2",
+    "runs/BURGERS_FULL_GRID.md": "6a446b45ad51c4e5977364994c05bf6711d9e4b7db5635b80758f4b9a80344f8",
+    "prog/mlps.py": "2a3d9bb45bfbef001fef9552c2e4d3e9575b85f3024244b0b8218bcbbfdb8253",
+    "prog/featlib.py": "de95c650eb291d1e346b3b3e8d8b082ad08369f674491a0a9dcad59f854addd6",
+    "utils/derivative_utils.py": "6c77e1df263b3eec9329eb2c044f2d7c018ce7b3e10bf2f8e89b5fd0cadeb2cf",
+    "Datasets/data/processed/burg_gen/burg_gen.py": "c40505165e0dc1124ec5cf17b5124c21f933b3dd5376b41b5feda57178654164"
+  },
+  "git_head": "de76958991d953afa4f9bd2520a0c542638d2863",
+  "git_branch": "sami",
+  "environment": {
+    "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+    "torch": "2.12.1+cu130",
+    "numpy": "2.4.6",
+    "platform": "Linux-6.8.0-142-generic-x86_64-with-glibc2.39",
+    "device": "cpu",
+    "dtype": "float32",
+    "threads_per_worker": 1
+  },
+  "historical_reference": "640 structured observations = 4.9019608% of full grid; not a random full-grid subset",
+  "interpretation": "Observation density and PDE collocation coverage vary together. Fixed solver and evaluation grid; known-support parameter estimation."
+}

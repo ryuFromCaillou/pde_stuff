@@ -1,0 +1,5 @@
+{
+  "target_corruption_rejected": true,
+  "batch_corruption_rejected": true,
+  "recovery_corruption_rejected": true
+}
