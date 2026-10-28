@@ -1116,7 +1116,7 @@ def _plot_aggregate(root, summaries, by_condition, per_seed, steps):
 
     index = {(s["sigma"], s["ratio"]): s for s in summaries}
     # Recovery heatmaps.
-    fig, axes = plt.subplots(1, 3, figsize=(17, 4.8))
+    fig, axes = plt.subplots(1, 3, figsize=(18, 5.0), constrained_layout=True)
     for ax, level, label in zip(
         axes,
         ("endpoint_loose", "endpoint_strong", "sustained_strong"),
@@ -1128,19 +1128,24 @@ def _plot_aggregate(root, summaries, by_condition, per_seed, steps):
             dtype=float,
         )
         im = _heatmap(ax, matrix, label, vmin=0, vmax=1)
+        ax.set_facecolor("0.92")
         for i, s in enumerate(SIGMAS):
             for j, r in enumerate(RATIOS):
                 n = index[(s, r)]["n_complete"]
-                ax.text(j, i + 0.32, f"n={n}", ha="center", va="center", fontsize=6, color="white" if matrix[i, j] < 0.6 else "black")
-    fig.colorbar(im, ax=axes, label="Recovery frequency (fraction of completed seeds)")
+                if n == 0:
+                    continue
+                value = matrix[i, j]
+                ax.text(j, i + 0.32, f"n={n}", ha="center", va="center", fontsize=6,
+                        color="white" if np.isfinite(value) and value < 0.6 else "black")
+    fig.colorbar(im, ax=axes, shrink=0.85, pad=0.015,
+                 label="Recovery frequency (fraction of completed seeds)")
     fig.suptitle("Burgers noise x sampling recovery — sinusoidal IC, nu=0.2")
-    fig.tight_layout()
-    for ext in ("png", "pdf"):
-        fig.savefig(root / f"noise_sampling_recovery_heatmap.{ext}", dpi=160)
+    fig.savefig(root / "noise_sampling_recovery_heatmap.png", dpi=160, bbox_inches="tight")
+    fig.savefig(root / "noise_sampling_recovery_heatmap.pdf", bbox_inches="tight")
     plt.close(fig)
 
     # Final coefficient errors.
-    fig, axes = plt.subplots(1, 2, figsize=(13, 5))
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5.2), constrained_layout=True)
     for ax, column, title in zip(
         axes,
         ("endpoint_mean_transport_abs_error", "endpoint_mean_diffusion_abs_error"),
@@ -1151,11 +1156,11 @@ def _plot_aggregate(root, summaries, by_condition, per_seed, steps):
             dtype=float,
         )
         im = _heatmap(ax, matrix, title, vmin=0, vmax=float(np.nanmax(matrix)) if np.isfinite(matrix).any() else 1, cmap="magma_r", fmt="{:.3f}")
-        fig.colorbar(im, ax=ax, label="Absolute error")
+        ax.set_facecolor("0.92")
+        fig.colorbar(im, ax=ax, shrink=0.85, pad=0.015, label="Absolute error")
     fig.suptitle("Final coefficient error by noise and sampling condition")
-    fig.tight_layout()
-    for ext in ("png", "pdf"):
-        fig.savefig(root / f"final_coefficient_error_heatmap.{ext}", dpi=160)
+    fig.savefig(root / "final_coefficient_error_heatmap.png", dpi=160, bbox_inches="tight")
+    fig.savefig(root / "final_coefficient_error_heatmap.pdf", bbox_inches="tight")
     plt.close(fig)
 
     # Mean coefficient trajectories with seed variability (6x5 panels).
@@ -1203,7 +1208,8 @@ def _plot_aggregate(root, summaries, by_condition, per_seed, steps):
             ax.plot(common, h["pde_loss"][common], lw=0.7, alpha=0.5, ls="--", label=f"seed {r['seed']} PDE")
         ax.set(xlabel="optimizer steps", ylabel="loss", yscale="log", title=f"sigma={sigma:g}, {int(ratio*100)}% (n={len(subset)})")
         ax.grid(alpha=0.2)
-    axes.flat[0].legend(fontsize=5, ncol=2)
+    if axes.flat[0].get_legend_handles_labels()[0]:
+        axes.flat[0].legend(fontsize=5, ncol=2)
     fig.suptitle("Representative data and PDE loss trajectories")
     fig.tight_layout()
     for ext in ("png", "pdf"):
