@@ -1,0 +1,28 @@
+#!/bin/bash
+#MSUB -N ghost_burg_shard
+#MSUB -W group_list=hpc2-cnsm-psun-users
+#MSUB -l nodes=1:ppn=2
+#MSUB -l walltime=08:00:00
+# One shard of the 180-run matrix, two single-threaded workers.
+# Submit 12 shards with:
+#   for i in $(seq 0 11); do msub -v HPC_BASE=...,SHARD_INDEX=$i,SHARDS=12 hpc/shard_cpu.msub; done
+set -eu
+BASE="${HPC_BASE:-/home/032480329/hpc_pde_smooth_noise/20261028}"
+SRC="${SRC:-$BASE/src}"
+RUN_ROOT="${RUN_ROOT:-$BASE/runs}"
+PY="${PY:-/home/032480329/mambaforge/envs/pdenet/bin/python}"
+SHARD_INDEX="${SHARD_INDEX:?set SHARD_INDEX}"
+SHARDS="${SHARDS:-12}"
+WORKERS="${WORKERS:-2}"
+STEPS="${STEPS:-100000}"
+export OMP_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export PYTHONDONTWRITEBYTECODE=1
+cd "$SRC"
+echo "shard_start_utc=$(date -u +%FT%TZ) host=$(hostname) shard=$SHARD_INDEX/$SHARDS workers=$WORKERS"
+"$PY" -u runs/run_burgers_smooth_noise_sampling.py \
+  --mode shard --output "$RUN_ROOT" \
+  --shard-index "$SHARD_INDEX" --shards "$SHARDS" --workers "$WORKERS" \
+  --steps "$STEPS" --resume
+echo "shard_end_utc=$(date -u +%FT%TZ) shard=$SHARD_INDEX exit=0"

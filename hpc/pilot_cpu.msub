@@ -1,0 +1,24 @@
+#!/bin/bash
+#MSUB -N ghost_burg_pilot
+#MSUB -W group_list=hpc2-cnsm-psun-users
+#MSUB -l nodes=1:ppn=1
+#MSUB -l walltime=00:00:30:00
+# Short representative pilot: 2000 optimizer steps in a separate pilot root.
+# Submit from the staged source directory with:
+#   msub -v HPC_BASE=/home/032480329/hpc_pde_smooth_noise/20261028 hpc/pilot_cpu.msub
+set -eu
+BASE="${HPC_BASE:-/home/032480329/hpc_pde_smooth_noise/20261028}"
+SRC="${SRC:-$BASE/src}"
+PILOT="${PILOT:-$BASE/pilot}"
+PY="${PY:-/home/032480329/mambaforge/envs/pdenet/bin/python}"
+export OMP_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export PYTHONDONTWRITEBYTECODE=1
+cd "$SRC"
+echo "pilot_start_utc=$(date -u +%FT%TZ) host=$(hostname) base=$BASE"
+"$PY" -c 'import sys,numpy,torch;print("python",sys.version.split()[0]);print("numpy",numpy.__version__);print("torch",torch.__version__,"cuda",torch.cuda.is_available())'
+"$PY" -u runs/run_burgers_smooth_noise_sampling.py \
+  --mode run-one --output "$PILOT" \
+  --ratio 1.0 --sigma 0 --seed 0 --steps "${STEPS:-2000}"
+echo "pilot_end_utc=$(date -u +%FT%TZ) exit=0"
