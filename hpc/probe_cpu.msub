@@ -1,0 +1,24 @@
+#!/bin/bash
+#MSUB -N ghost_burg_probe
+#MSUB -W group_list=hpc2-cnsm-psun-users
+#MSUB -l nodes=1:ppn=1
+#MSUB -l walltime=00:00:40:00
+# Bounded convergence probe: resume the completed 2,000-step pilot run to
+# PROBE_STEPS (default 20,000) in the separate pilot root. This is engineering
+# troubleshooting, not a member of the 180-run research matrix.
+set -eu
+BASE="${HPC_BASE:-/home/032480329/hpc_pde_smooth_noise/20261028}"
+SRC="${SRC:-$BASE/src}"
+PILOT="${PILOT:-$BASE/pilot}"
+PY="${PY:-/home/032480329/mambaforge/envs/pdenet/bin/python}"
+PROBE_STEPS="${PROBE_STEPS:-20000}"
+export OMP_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export PYTHONDONTWRITEBYTECODE=1
+cd "$SRC"
+echo "probe_start_utc=$(date -u +%FT%TZ) host=$(hostname) steps=$PROBE_STEPS"
+"$PY" -u runs/run_burgers_smooth_noise_sampling.py \
+  --mode run-one --output "$PILOT" \
+  --ratio 1.0 --sigma 0 --seed 0 --steps "$PROBE_STEPS" --resume
+echo "probe_end_utc=$(date -u +%FT%TZ) exit=0"
