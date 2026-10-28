@@ -104,11 +104,12 @@ def count_for(ratio: float) -> int:
 
 
 def run_id(ratio: float, sigma: float, seed: int) -> str:
-    return f"burgers_nu{NU:g}_r{ratio:.2f}_s{sigma:.2f}_seed{seed}"
+    return f"burgers_nu{NU:g}_r{ratio:.2f}_s{sigma:.2f}_seed{int(seed)}"
 
 
 def run_directory(root: Path, ratio: float, sigma: float, seed: int) -> Path:
-    return Path(root) / "raw" / f"ratio_{ratio:g}" / f"sigma_{sigma:g}" / f"seed_{seed}"
+    # Summaries round-trip seed through JSON as a float; always format as int.
+    return Path(root) / "raw" / f"ratio_{ratio:g}" / f"sigma_{sigma:g}" / f"seed_{int(seed)}"
 
 
 def derive_rng(seed: int, role: int) -> np.random.Generator:
@@ -1043,7 +1044,7 @@ def aggregate(
                     dict(
                         ratio=ratio,
                         sigma=sigma,
-                        seed=r["seed"],
+                        seed=int(r["seed"]),
                         count=count_for(ratio),
                         transport=r["transport"],
                         diffusion=r["diffusion"],

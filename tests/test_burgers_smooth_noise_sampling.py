@@ -119,6 +119,18 @@ class TestDesign(unittest.TestCase):
             self.assertEqual(Path(record["directory"]), expected)
             self.assertEqual(record["run_id"], run_id(record["ratio"], record["sigma"], record["seed"]))
 
+    def test_seed_path_formatting(self):
+        # Summaries round-trip seed as a float; paths and IDs must stay integral.
+        self.assertEqual(
+            run_directory(Path("x"), 1.0, 0.0, 0.0),
+            Path("x/raw/ratio_1/sigma_0/seed_0"),
+        )
+        self.assertEqual(
+            run_directory(Path("x"), 0.1, 0.2, 5.0),
+            Path("x/raw/ratio_0.1/sigma_0.2/seed_5"),
+        )
+        self.assertEqual(run_id(1.0, 0.0, 0.0), "burgers_nu0.2_r1.00_s0.00_seed0")
+
     def test_nested_sampling(self):
         design = replicate_design(0)
         self.assertEqual(len(design["population"]), POPULATION)
