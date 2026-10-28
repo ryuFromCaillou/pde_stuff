@@ -31,7 +31,7 @@ and historical documentation deferring noise execution.
 From `/home/ghost/projects/pde_stuff`:
 
 ```sh
-/home/ghost/ghost/pde_stuff/.venv/bin/python runs/run_burgers_six_seed.py --output run_results/physics_informed_burgers/noise_six_seed --workers 4
+/home/ghost/projects/pde_stuff/.venv/bin/python runs/run_burgers_six_seed.py --output run_results/physics_informed_burgers/noise_six_seed --workers 4
 ```
 
 Use a new output directory for a fresh study. An existing output can reuse complete
@@ -47,7 +47,7 @@ all 36. `aggregation_validation.json` explicitly lists missing/incomplete levels
 To reproduce only figures/tables from the archived per-seed data:
 
 ```sh
-/home/ghost/ghost/pde_stuff/.venv/bin/python runs/run_burgers_six_seed.py --output run_results/physics_informed_burgers/noise_six_seed --plot-only
+/home/ghost/projects/pde_stuff/.venv/bin/python runs/run_burgers_six_seed.py --output run_results/physics_informed_burgers/noise_six_seed --plot-only
 ```
 
 ## Aggregation and plot inventory
@@ -96,13 +96,13 @@ contains SHA-256 and sizes for artifacts, excluding itself and live execution lo
 Regression check:
 
 ```sh
-/home/ghost/ghost/pde_stuff/.venv/bin/python -m unittest discover -s tests -p test_burgers_six_seed.py
+/home/ghost/projects/pde_stuff/.venv/bin/python -m unittest discover -s tests -p test_burgers_six_seed.py
 ```
 
 Final independent audit and figure regeneration:
 
 ```sh
-/home/ghost/ghost/pde_stuff/.venv/bin/python runs/audit_burgers_six_seed.py --output run_results/physics_informed_burgers/noise_six_seed
+/home/ghost/projects/pde_stuff/.venv/bin/python runs/audit_burgers_six_seed.py --output run_results/physics_informed_burgers/noise_six_seed
 ```
 
 The active execution is followed by an independent audit watcher. Its outcome is

@@ -45,7 +45,7 @@ With-replacement batches do not constitute dataset epochs.
 Run from repository root (the available environment in this workspace):
 
 ```
-/home/ghost/ghost/pde_stuff/.venv/bin/python runs/run_physics_informed_burgers.py --output run_results/physics_informed_burgers/clean_baseline
+/home/ghost/projects/pde_stuff/.venv/bin/python runs/run_physics_informed_burgers.py --output run_results/physics_informed_burgers/clean_baseline
 ```
 
 Use a fresh output destination. `--validate-only` runs mechanical/numerical validation;
@@ -92,7 +92,7 @@ intentionally offers no noise or sparsity execution flags for this immediate tas
 Read-only final artifact audit (use a new audit output destination):
 
 ```
-/home/ghost/ghost/pde_stuff/.venv/bin/python runs/run_physics_informed_burgers_audit.py --source run_results/physics_informed_burgers/clean_baseline --output run_results/physics_informed_burgers/clean_audit
+/home/ghost/projects/pde_stuff/.venv/bin/python runs/run_physics_informed_burgers_audit.py --source run_results/physics_informed_burgers/clean_baseline --output run_results/physics_informed_burgers/clean_audit
 ```
 
 The audit checks every scalar row, first crossing and endpoint, saved physical
@@ -116,7 +116,7 @@ Evidence and the original source snapshots are in `reporting_fix_provenance/`.
 Continue validated completed seeds into a **new** destination with:
 
 ```
-/home/ghost/ghost/pde_stuff/.venv/bin/python runs/run_physics_informed_burgers.py --output run_results/physics_informed_burgers/clean_baseline_completed --reuse-completed run_results/physics_informed_burgers/clean_baseline --workers 2
+/home/ghost/projects/pde_stuff/.venv/bin/python runs/run_physics_informed_burgers.py --output run_results/physics_informed_burgers/clean_baseline_completed --reuse-completed run_results/physics_informed_burgers/clean_baseline --workers 2
 ```
 
 `--reuse-completed` requires the seed-0 gate and identical scientific configuration.

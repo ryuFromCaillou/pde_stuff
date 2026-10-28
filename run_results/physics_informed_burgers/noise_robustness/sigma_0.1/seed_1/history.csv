@@ -1,0 +1,2 @@
+step,sigma,init_seed,noise_seed,data_loss,pde_loss,total_loss,transport,diffusion,transport_abs_error,diffusion_abs_error,transport_relative_error,diffusion_relative_error,loose,strong
+0,0.1,1,700001,2.0273234844207764,0.14160054922103882,2.16892409324646,0.0,0.0,1.0,0.02,1.0,1.0,False,False

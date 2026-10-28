@@ -13,7 +13,7 @@ Loose: abs(transport+1)<0.25, abs(diffusion−0.02)<0.02, spurious L2<0.25. Stro
 Unconstrained LS precedes head fitting: float64 unit-column SVD, rcond=1e-12, no intercept/regularization, physical coefficients, full and true-term support. LS compatibility and nonlinear head optimization are separate questions.
 
 ```bash
-cd /home/ghost/ghost/pde_stuff
+cd /home/ghost/projects/pde_stuff
 OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=2 .venv/bin/python -u runs/run_phase19b_recombination.py --out run_results/phase19b_recombination_intervention_repeat
 ```
 

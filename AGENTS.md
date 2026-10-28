@@ -1,5 +1,9 @@
 # Layer 1 (ICM): Repository Map
 
+## Workspace location
+
+On Ark2, use `/home/ghost/projects/pde_stuff` and its `.venv`. This checkout was consolidated on 2026-10-28 onto published `sami` at `3f5c45f`, retaining artifacts from both previous Ark2 checkouts. `/home/ghost/ghost/pde_stuff` has been retired. Historical artifact records may still contain that old absolute prefix; interpret it as historical provenance and map it to the canonical root when locating the same files. Do not rewrite archived scientific evidence merely to update paths. Ark1 remains a separate workspace.
+
 ## Project Identity
 
 This repository contains PyTorch-based experiments for PDE-Net style workflows: learning surrogate fields, evaluating derivatives/features, fitting PDE coefficients, and running sweeps/ablations. Primary outputs are experiment artifacts under `run_results/` (plots, metrics, saved tensors/models) produced by scripts in `runs/`.

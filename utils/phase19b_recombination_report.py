@@ -205,7 +205,7 @@ All original long-horizon, post-hoc, instrumentation artifacts and the narrative
 
 ## Reproduction
 
-From `/home/ghost/ghost/pde_stuff`:
+From `/home/ghost/projects/pde_stuff`:
 
 ```bash
 OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=2 .venv/bin/python -u runs/run_phase19b_recombination.py --out run_results/phase19b_recombination_intervention_repeat

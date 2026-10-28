@@ -5,3 +5,17 @@ artifacts.md
 .venv/
 *.bin
 Datasets/shared/
+
+# Presentation artifacts: keep plots, CSV tables, and readable reports.
+# Intermediate arrays, checkpoints, metadata, and logs remain local.
+# Already committed artifacts remain tracked.
+/run_results/**
+!/run_results/**/
+!/run_results/**/*.csv
+!/run_results/**/*.pdf
+!/run_results/**/*.png
+!/run_results/**/*.svg
+!/run_results/**/*.jpg
+!/run_results/**/*.jpeg
+!/run_results/**/*.html
+!/run_results/**/*.md

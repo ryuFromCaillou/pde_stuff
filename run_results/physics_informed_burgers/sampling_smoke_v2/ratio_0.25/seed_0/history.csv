@@ -1,0 +1,2 @@
+step,ratio,count,init_seed,data_loss,pde_loss,total_loss,transport,diffusion,transport_abs_error,diffusion_abs_error,transport_relative_error,diffusion_relative_error,loose,strong
+0,0.25,160,0,3.1047275066375732,0.04433901235461235,3.14906644821167,0.0,0.0,1.0,0.02,1.0,1.0,False,False
