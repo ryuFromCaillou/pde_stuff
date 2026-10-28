@@ -1,7 +1,7 @@
 #!/bin/bash
 #MSUB -N ghost_burg_bench_gpu
 #MSUB -W group_list=hpc2-cnsm-psun-users
-#MSUB -l nodes=1:ppn=1,gres=gpus:1
+#MSUB -l nodes=1:ppn=1:gpus=1
 #MSUB -l walltime=00:01:00:00
 # GPU benchmark: same 2000-step workload and architecture as the CPU benchmark.
 # The payload records CUDA availability; it does not fail the job if no GPU is
