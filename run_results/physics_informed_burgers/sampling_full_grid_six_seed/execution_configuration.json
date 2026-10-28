@@ -1,7 +1,0 @@
-{
-  "workers": 4,
-  "threads_per_worker": 1,
-  "device": "cpu",
-  "all_conditions_independent": true,
-  "gate_completed_before_remaining": true
-}

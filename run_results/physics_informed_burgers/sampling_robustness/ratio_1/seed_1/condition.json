@@ -1,9 +1,0 @@
-{
-  "ratio": 1.0,
-  "count": 640,
-  "init_seed": 1,
-  "sampling_seed": 910064,
-  "sampling_method": "reused validated clean 640 baseline; nested permutation recorded",
-  "batch_size": 640,
-  "batch_sampling": "with replacement"
-}

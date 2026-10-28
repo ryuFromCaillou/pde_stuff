@@ -1,7 +1,0 @@
-cd /home/ghost/projects/pde_stuff
-# Run remaining conditions with the unchanged original train_condition:
-/home/ghost/ghost/pde_stuff/.venv/bin/python runs/run_burgers_six_seed.py --output run_results/physics_informed_burgers/noise_six_seed --workers 4
-# Rebuild every plot/table directly from the archived raw histories:
-/home/ghost/ghost/pde_stuff/.venv/bin/python runs/run_burgers_six_seed.py --output run_results/physics_informed_burgers/noise_six_seed --plot-only
-# Fresh reproduction: choose a NEW output path with the first command.
-# Source snapshot: code/; authoritative base commit: bad712797f9b0fb24dd840a356f96ef592d4e97a.

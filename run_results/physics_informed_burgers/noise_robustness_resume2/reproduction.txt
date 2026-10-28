@@ -1,1 +1,0 @@
-/home/ghost/ghost/pde_stuff/.venv/bin/python runs/run_physics_informed_burgers_noise.py --output run_results/physics_informed_burgers/noise_robustness_resume2 --steps 100000 --workers 4

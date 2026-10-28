@@ -1,4 +1,0 @@
-ratio=1 seed=0 step=0 xi=(0,0) loss=2.7245
-ratio=1 seed=0 step=100 xi=(0.0161352,0.0152009) loss=0.10672
-ratio=0.1 seed=0 step=0 xi=(0,0) loss=2.856
-ratio=0.1 seed=0 step=100 xi=(0.0174535,0.0148665) loss=0.105

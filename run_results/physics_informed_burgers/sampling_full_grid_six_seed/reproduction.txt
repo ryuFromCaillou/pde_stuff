@@ -1,5 +1,0 @@
-/home/ghost/ghost/pde_stuff/.venv/bin/python runs/run_burgers_full_grid.py --output run_results/physics_informed_burgers/sampling_full_grid_six_seed --mode prepare
-/home/ghost/ghost/pde_stuff/.venv/bin/python runs/run_burgers_full_grid.py --output run_results/physics_informed_burgers/sampling_full_grid_six_seed --mode smoke
-/home/ghost/ghost/pde_stuff/.venv/bin/python runs/run_burgers_full_grid.py --output run_results/physics_informed_burgers/sampling_full_grid_six_seed --mode gate
-/home/ghost/ghost/pde_stuff/.venv/bin/python runs/run_burgers_full_grid.py --output run_results/physics_informed_burgers/sampling_full_grid_six_seed --mode remaining
-/home/ghost/ghost/pde_stuff/.venv/bin/python runs/run_burgers_full_grid.py --output run_results/physics_informed_burgers/sampling_full_grid_six_seed --mode publish
