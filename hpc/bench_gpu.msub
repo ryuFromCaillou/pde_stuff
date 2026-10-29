@@ -1,0 +1,24 @@
+#!/bin/bash
+#MSUB -N ghost_burg_bench_gpu
+#MSUB -W group_list=hpc2-cnsm-psun-users
+#MSUB -l nodes=1:ppn=1:gpus=1
+#MSUB -l walltime=00:01:00:00
+# GPU benchmark: same 2000-step workload and architecture as the CPU benchmark.
+# The payload records CUDA availability; it does not fail the job if no GPU is
+# visible, so an entitlement problem is reported rather than silently ignored.
+set -eu
+BASE="${HPC_BASE:-/home/032480329/hpc_pde_smooth_noise/20261028}"
+SRC="${SRC:-$BASE/src}"
+BENCH="${BENCH:-$BASE/bench}"
+PY="${PY:-/home/032480329/mambaforge/envs/pdenet/bin/python}"
+export OMP_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export PYTHONDONTWRITEBYTECODE=1
+cd "$SRC"
+echo "bench_gpu_start_utc=$(date -u +%FT%TZ) host=$(hostname)"
+"$PY" -c 'import torch;print("torch",torch.__version__,"cuda_available",torch.cuda.is_available());print("device_count",torch.cuda.device_count());print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else "no_gpu")'
+"$PY" -u runs/run_burgers_smooth_noise_sampling.py \
+  --mode benchmark --output "$BENCH/gpu" --ratio 1.0 --sigma 0 --seed 0 \
+  --steps "${STEPS:-2000}" --device cuda
+echo "bench_gpu_end_utc=$(date -u +%FT%TZ) exit=0"
